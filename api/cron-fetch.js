@@ -2,12 +2,15 @@ import { RSS_FEEDS, getCategoryNews } from "./_lib/fetchNews.js";
 import { submitSummaryBatch, pollSummaryBatch, storyHash } from "./_lib/claude.js";
 import { getSupabaseService } from "./_lib/supabase.js";
 
-// Vercel Cron invocations carry this header automatically; reject anything
-// else so the endpoint can't be triggered (and run up API spend) by a
-// random public request.
+// Triggered by an external scheduler (cron-job.org) hitting this public URL
+// on a timer, not Vercel Cron — so this header check is the only thing
+// stopping a random request from triggering a Claude run (and the API spend
+// that comes with it). CRON_SECRET must be set in the Vercel project's env
+// vars, with the scheduler configured to send `Authorization: Bearer <the
+// same value>` on every request.
 function isAuthorised(req) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // no secret configured (e.g. local dev)
+  if (!secret) return true; // unset only for local dev — never deploy without it
   return req.headers.authorization === `Bearer ${secret}`;
 }
 

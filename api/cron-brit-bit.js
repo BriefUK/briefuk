@@ -11,9 +11,14 @@ const SECTIONS = [
   "only_in_britain",
 ];
 
+// Triggered by an external scheduler (cron-job.org) hitting this public URL
+// on a timer, not Vercel Cron — so this header check is the only thing
+// stopping a random request from triggering a Claude run. CRON_SECRET must
+// be set in the Vercel project's env vars, with the scheduler configured to
+// send `Authorization: Bearer <the same value>` on every request.
 function isAuthorised(req) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true;
+  if (!secret) return true; // unset only for local dev — never deploy without it
   return req.headers.authorization === `Bearer ${secret}`;
 }
 
