@@ -47,6 +47,38 @@ function timeAgo(dateStr) {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
+function dateGroupLabel(dateStr) {
+  if (!dateStr) return "Earlier";
+  const date = new Date(dateStr);
+  const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffDays = Math.round((startOfDay(new Date()) - startOfDay(date)) / 86400000);
+  if (diffDays === 0) return "Today";
+  if (diffDays === 1) return "Yesterday";
+  // Built manually rather than via a single toLocaleDateString call — en-GB
+  // omits the comma ("Monday 28 June") and en-US gets the day/month order
+  // wrong ("Monday, June 28"); neither matches "Monday, 28 June".
+  const weekday = date.toLocaleDateString("en-GB", { weekday: "long" });
+  const dayMonth = date.toLocaleDateString("en-GB", { day: "numeric", month: "long" });
+  return `${weekday}, ${dayMonth}`;
+}
+
+// Groups already-newest-first items into { label, entries: [{ item, index }] }
+// sections, keeping each item's original index into `items` so click
+// handlers and "is this the selected story" checks still work unchanged.
+function groupByDate(items) {
+  const groups = [];
+  let current = null;
+  items.forEach((item, index) => {
+    const label = dateGroupLabel(item.pubDate);
+    if (!current || current.label !== label) {
+      current = { label, entries: [] };
+      groups.push(current);
+    }
+    current.entries.push({ item, index });
+  });
+  return groups;
+}
+
 // ── Header ────────────────────────────────────────────────────────────────────
 function Header({ theme, onThemeToggle }) {
   return (
@@ -55,7 +87,7 @@ function Header({ theme, onThemeToggle }) {
         <span className="logo-text">
           Brief<span className="logo-accent">UK</span>
         </span>
-        <span className="logo-tagline">Every story. 60 words.</span>
+        <span className="logo-tagline">Every story – 60 words or less.</span>
       </div>
       <button
         className="theme-toggle"
@@ -90,6 +122,18 @@ function CategoryNav({ active, onSelect }) {
   );
 }
 
+// ── Category hero ────────────────────────────────────────────────────────────
+function CategoryHero({ category, accentColor }) {
+  return (
+    <div className="category-hero">
+      <h1 className="category-hero-title" style={{ color: accentColor }}>
+        {CATEGORY_ICONS[category]} {category}
+      </h1>
+      <p className="category-hero-tagline">Every story – 60 words or less.</p>
+    </div>
+  );
+}
+
 // ── Sidebar ───────────────────────────────────────────────────────────────────
 function SidebarSkeleton() {
   return (
@@ -120,22 +164,28 @@ function Sidebar({ items, selectedIndex, onSelect, accentColor, loading, lastUpd
       ) : items.length === 0 ? (
         <div className="sidebar-empty">No stories.</div>
       ) : (
-        <ul className="sidebar-list">
-          {items.map((item, i) => (
-            <li key={item.id}>
-              <button
-                className={`sidebar-item${i === selectedIndex ? " active" : ""}`}
-                style={i === selectedIndex ? { borderLeftColor: accentColor, background: `${accentColor}14` } : undefined}
-                onClick={() => onSelect(i)}
-              >
-                <span className="sidebar-item-meta">
-                  <span style={{ color: accentColor }}>{item.source}</span> · {timeAgo(item.pubDate)}
-                </span>
-                <span className="sidebar-item-title">{item.title}</span>
-              </button>
-            </li>
-          ))}
-        </ul>
+        groupByDate(items).map((group) => (
+          <div className="date-group" key={group.label}>
+            <div className="date-group-header">{group.label}</div>
+            <ul className="sidebar-list">
+              {group.entries.map(({ item, index }) => (
+                <li key={item.id}>
+                  <button
+                    className={`sidebar-item${index === selectedIndex ? " active" : ""}`}
+                    style={index === selectedIndex ? { borderLeftColor: accentColor, background: `${accentColor}14` } : undefined}
+                    onClick={() => onSelect(index)}
+                  >
+                    <span className="sidebar-item-meta">
+                      <span style={{ color: accentColor }}>{item.source}</span> · {timeAgo(item.pubDate)}
+                      {item.wordCount ? <span className="word-count-badge"> · {item.wordCount} words</span> : null}
+                    </span>
+                    <span className="sidebar-item-title">{item.title}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
       )}
     </aside>
   );
@@ -209,6 +259,7 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
         <h2 className="story-headline">{story.title}</h2>
 
         <p className="story-brief">{story.brief}</p>
+        {story.wordCount ? <span className="word-count-badge story-word-count">{story.wordCount} words</span> : null}
 
         <div className="story-actions">
           <a href={story.link} target="_blank" rel="noopener noreferrer"
@@ -418,15 +469,22 @@ export default function App() {
         .category-nav::-webkit-scrollbar { display: none; }
         .category-btn { flex-shrink: 0; background: var(--surface); color: var(--text-5); border: 1px solid var(--border); border-radius: 20px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
 
+        /* ── Category hero ─────────────────────────────────── */
+        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 20px 18px; }
+        .category-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 4px; }
+        .category-hero-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; }
+
         /* ── Layout ───────────────────────────────────────── */
         .layout { max-width: 1280px; margin: 0 auto; display: flex; gap: 24px; padding: 24px 20px 60px; align-items: flex-start; }
 
         /* ── Sidebar ──────────────────────────────────────── */
         .sidebar { width: 360px; flex-shrink: 0; position: sticky; top: 142px; max-height: calc(100vh - 142px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
-        .sidebar-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 1; }
+        .sidebar-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 2; }
         .sidebar-count { font-size: 12px; color: var(--text-5); }
         .sidebar-updated { color: var(--text-6); }
         .refresh-btn { background: none; border: none; color: var(--text-5); font-size: 15px; cursor: pointer; }
+        .date-group + .date-group { border-top: 1px solid var(--border); }
+        .date-group-header { position: sticky; top: 44px; z-index: 1; background: var(--surface); padding: 8px 16px; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-5); }
         .sidebar-list { list-style: none; }
         .sidebar-item { width: 100%; text-align: left; background: none; border: none; border-left: 3px solid transparent; padding: 14px 16px; cursor: pointer; display: flex; flex-direction: column; gap: 6px; border-bottom: 1px solid var(--border-2); color: inherit; }
         .sidebar-item-meta { font-size: 11px; color: var(--text-4); font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; }
@@ -445,7 +503,9 @@ export default function App() {
         .story-source { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; border: 1px solid; padding: 3px 10px; border-radius: 20px; }
         .story-time { font-size: 12px; color: var(--text-5); }
         .story-headline { font-size: 28px; font-weight: 900; line-height: 1.25; letter-spacing: -0.02em; color: var(--text-1); margin-bottom: 16px; }
-        .story-brief { font-size: 15px; line-height: 1.7; color: var(--text-3); margin-bottom: 24px; }
+        .story-brief { font-size: 15px; line-height: 1.7; color: var(--text-3); margin-bottom: 8px; }
+        .word-count-badge { font-size: 11px; color: var(--text-5); font-weight: 600; text-transform: none; letter-spacing: normal; }
+        .story-word-count { display: block; margin-bottom: 24px; }
         .story-actions { display: flex; gap: 12px; flex-wrap: wrap; }
         .btn-primary { color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-weight: 700; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
         .btn-secondary { background: var(--surface-2); color: var(--text-2); border: none; border-radius: 8px; padding: 12px 22px; font-weight: 700; font-size: 14px; cursor: pointer; }
@@ -477,6 +537,7 @@ export default function App() {
           .logo-text { font-size: 28px; }
           .logo-tagline { display: none; }
           .story-headline { font-size: 22px; }
+          .category-hero-title { font-size: 18px; }
         }
       `}</style>
 
@@ -484,6 +545,8 @@ export default function App() {
         <Header theme={theme} onThemeToggle={toggleTheme} />
         <CategoryNav active={activeCategory} onSelect={setActiveCategory} />
       </div>
+
+      {activeCategory !== BRIT_BIT && <CategoryHero category={activeCategory} accentColor={accentColor} />}
 
       <div className="layout">
         {activeCategory === BRIT_BIT ? (

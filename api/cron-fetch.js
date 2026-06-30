@@ -71,7 +71,8 @@ async function insertFinishedStories(supabase, pendingStories, briefs) {
       const brief = briefs.get(storyHash(s.url));
       if (!brief) return null;
       const { description, ...row } = s;
-      return { ...row, brief };
+      const wordCount = brief.trim().split(/\s+/).filter(Boolean).length;
+      return { ...row, brief, word_count: wordCount };
     })
     .filter(Boolean);
   if (rows.length === 0) return;

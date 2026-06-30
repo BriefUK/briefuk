@@ -17,7 +17,7 @@ export default async function handler(req, res) {
   const supabase = getSupabaseAnon();
   const { data: stories, error } = await supabase
     .from("stories")
-    .select("url, title, brief, source, image_url, published_at")
+    .select("url, title, brief, source, image_url, published_at, word_count")
     .eq("category", category)
     .order("published_at", { ascending: false })
     .limit(60);
@@ -35,6 +35,7 @@ export default async function handler(req, res) {
     source: s.source,
     pubDate: s.published_at,
     image: s.image_url,
+    wordCount: s.word_count,
   }));
 
   res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=300");
