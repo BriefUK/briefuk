@@ -451,6 +451,15 @@ export default function App() {
   const [loading, setLoading] = useState({});
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
+  // readIds: { [storyId]: readTimestamp }  — persisted in localStorage.
+  // Pruned on load so entries older than 3 days never accumulate.
+  const [readIds, setReadIds] = useState(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem("briefuk-read") || "{}");
+      const cutoff = Date.now() - 3 * 24 * 60 * 60 * 1000;
+      return Object.fromEntries(Object.entries(stored).filter(([, ts]) => ts > cutoff));
+    } catch { return {}; }
+  });
   const [britBitEdition, setBritBitEdition] = useState(null);
   const [britBitLoading, setBritBitLoading] = useState(false);
   const [britBitFetched, setBritBitFetched] = useState(false);
@@ -546,10 +555,27 @@ export default function App() {
   const goPrev = () => setSelectedIndex((i) => Math.max(i - 1, 0));
   const goNext = () => setSelectedIndex((i) => Math.min(i + 1, currentNews.length - 1));
 
-  const todayStr = new Date().toISOString().slice(0, 10);
+  function markRead(id) {
+    if (!id || readIds[id]) return;
+    setReadIds((prev) => {
+      const next = { ...prev, [id]: Date.now() };
+      try { localStorage.setItem("briefuk-read", JSON.stringify(next)); } catch {}
+      return next;
+    });
+  }
+
+  // Mark the visible story as read whenever it changes (keyboard, swipe, click).
+  useEffect(() => {
+    if (selectedStory?.id) markRead(selectedStory.id);
+  }, [selectedStory?.id]);
+
+  // Badge = stories published within the last 24 hours that haven't been read yet.
+  const window24h = Date.now() - 24 * 60 * 60 * 1000;
   const todayCounts = {};
   for (const [cat, stories] of Object.entries(newsByCategory)) {
-    const n = stories.filter((s) => s.pubDate?.slice(0, 10) === todayStr).length;
+    const n = stories.filter(
+      (s) => s.pubDate && new Date(s.pubDate).getTime() > window24h && !readIds[s.id]
+    ).length;
     if (n > 0) todayCounts[cat] = n;
   }
 
