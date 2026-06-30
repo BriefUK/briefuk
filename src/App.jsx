@@ -397,10 +397,11 @@ function BritBitPanel({ edition, loading, accentColor, onRetry }) {
 
 // ── Shortcuts hint ────────────────────────────────────────────────────────────
 const SHORTCUTS = [
-  { keys: ["←", "→"],  label: "Previous / next story" },
-  { keys: ["O"],       label: "Open full article" },
-  { keys: ["D"],       label: "Toggle dark / light" },
-  { keys: ["1–9"],     label: "Jump to category" },
+  { keys: ["↑", "↓"],  label: "Previous / next story" },
+  { keys: ["←", "→"],  label: "Previous / next category" },
+  { keys: ["O"],        label: "Open full article" },
+  { keys: ["D"],        label: "Toggle dark / light" },
+  { keys: ["1–9"],      label: "Jump to category" },
 ];
 
 function ShortcutsHint() {
@@ -511,12 +512,19 @@ export default function App() {
       const tag = e.target.tagName;
       if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
 
-      if (e.key === "ArrowLeft" && activeCategory !== BRIT_BIT) {
-        e.preventDefault(); // prevent page scroll — we own this key here
+      // All categories in tab order so ← → can cycle through them all.
+      const allCats = [...CATEGORIES, BRIT_BIT];
+      const catIdx = allCats.indexOf(activeCategory);
+
+      if (e.key === "ArrowUp" && activeCategory !== BRIT_BIT) {
+        // No preventDefault — don't block vertical page / trackpad scroll.
         setSelectedIndex((i) => Math.max(i - 1, 0));
-      } else if (e.key === "ArrowRight" && activeCategory !== BRIT_BIT) {
-        e.preventDefault();
+      } else if (e.key === "ArrowDown" && activeCategory !== BRIT_BIT) {
         setSelectedIndex((i) => Math.min(i + 1, (newsByCategory[activeCategory]?.length ?? 1) - 1));
+      } else if (e.key === "ArrowLeft") {
+        if (catIdx > 0) setActiveCategory(allCats[catIdx - 1]);
+      } else if (e.key === "ArrowRight") {
+        if (catIdx < allCats.length - 1) setActiveCategory(allCats[catIdx + 1]);
       } else if (e.key === "o" || e.key === "O") {
         if (selectedStory?.link) window.open(selectedStory.link, "_blank", "noopener,noreferrer");
       } else if (e.key === "d" || e.key === "D") {
