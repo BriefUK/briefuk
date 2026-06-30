@@ -100,6 +100,19 @@ function upgradeBbcThumbnail(url) {
   return url.replace(/\/standard\/\d+\//, "/standard/976/");
 }
 
+// JS's Date parser only reliably recognises GMT/UT and numeric offsets in
+// RFC 822-style strings — some feeds (Sky Sports) use local abbreviations
+// like "BST" that parse as Invalid Date. Normalise to a real ISO string (or
+// null) here so every downstream consumer gets a clean, parseable value.
+const TZ_OFFSETS = { GMT: "+0000", UT: "+0000", UTC: "+0000", BST: "+0100", EST: "-0500", EDT: "-0400" };
+
+function normalizePubDate(raw) {
+  if (!raw) return null;
+  const fixed = raw.replace(/\b(GMT|UT|UTC|BST|EST|EDT)$/, (tz) => TZ_OFFSETS[tz]);
+  const date = new Date(fixed);
+  return isNaN(date.getTime()) ? null : date.toISOString();
+}
+
 function firstImgFromHtml(html) {
   const match = /<img[^>]+src=["']([^"'>]+)["']/i.exec(html || "");
   return match ? match[1] : null;
@@ -147,7 +160,7 @@ async function fetchFeed({ url, name }) {
         brief: truncate60(stripHtml(textOf(item.description))),
         link: textOf(item.link),
         source: name,
-        pubDate: textOf(item.pubDate),
+        pubDate: normalizePubDate(textOf(item.pubDate)),
         image: pickImage(item),
       };
     });
@@ -183,14 +196,29 @@ const CATEGORY_FILTERS = {
   Business:    ["company", "ceo", "profit", "shares", "stock market", "economy", "trade", "investment", "startup", "merger"],
 };
 
+// Phrases that mean a story is *about* the category as a media genre or
+// passing mention rather than being actual category news — e.g. a TV review
+// of a "crime drama" matches the bare "crime" keyword above, and a personal
+// story that happens to mention being "in debt" matches Money. Any match
+// here disqualifies the item regardless of CATEGORY_FILTERS.
+const CATEGORY_EXCLUDES = {
+  Crime: ["crime drama", "crime thriller", "crime series", "crime novel", "crime film", "crime fiction", "true crime podcast", "binge watch", "binge-watch"],
+};
+
 // Word-boundary matching avoids false positives from short keywords
 // (e.g. "mp" inside "computer", "ai" inside "rain").
-function matchesCategory(item, keywords) {
-  const text = `${item.title} ${item.brief}`.toLowerCase();
-  return keywords.some((kw) => {
-    const escaped = kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+function textMatches(text, phrases) {
+  return phrases.some((phrase) => {
+    const escaped = phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
     return new RegExp(`\\b${escaped}\\b`, "i").test(text);
   });
+}
+
+function matchesCategory(item, category) {
+  const text = `${item.title} ${item.brief}`.toLowerCase();
+  const excludes = CATEGORY_EXCLUDES[category];
+  if (excludes && textMatches(text, excludes)) return false;
+  return textMatches(text, CATEGORY_FILTERS[category]);
 }
 
 // Returns null when `category` isn't a known feed key.
@@ -200,6 +228,5 @@ export async function getCategoryNews(category) {
   const results = await Promise.all(feeds.map(fetchFeed));
   const unique = deduplicate(results.flat());
   const sorted = unique.sort((a, b) => new Date(b.pubDate) - new Date(a.pubDate));
-  const keywords = CATEGORY_FILTERS[category];
-  return keywords ? sorted.filter((item) => matchesCategory(item, keywords)) : sorted;
+  return CATEGORY_FILTERS[category] ? sorted.filter((item) => matchesCategory(item, category)) : sorted;
 }

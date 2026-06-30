@@ -1,4 +1,7 @@
-import { getCategoryNews } from "./_lib/fetchNews.js";
+import { RSS_FEEDS } from "./_lib/fetchNews.js";
+import { getSupabaseAnon } from "./_lib/supabase.js";
+
+const KNOWN_CATEGORIES = new Set(Object.keys(RSS_FEEDS));
 
 export default async function handler(req, res) {
   const { category } = req.query;
@@ -6,12 +9,33 @@ export default async function handler(req, res) {
     res.status(400).json({ error: "Missing required 'category' query parameter" });
     return;
   }
-
-  const items = await getCategoryNews(category);
-  if (items === null) {
+  if (!KNOWN_CATEGORIES.has(category)) {
     res.status(404).json({ error: `Unknown category: ${category}` });
     return;
   }
+
+  const supabase = getSupabaseAnon();
+  const { data: stories, error } = await supabase
+    .from("stories")
+    .select("url, title, brief, source, image_url, published_at")
+    .eq("category", category)
+    .order("published_at", { ascending: false })
+    .limit(60);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+
+  const items = stories.map((s) => ({
+    id: s.url,
+    title: s.title,
+    brief: s.brief,
+    link: s.url,
+    source: s.source,
+    pubDate: s.published_at,
+    image: s.image_url,
+  }));
 
   res.setHeader("Cache-Control", "s-maxage=120, stale-while-revalidate=300");
   res.status(200).json({ items });

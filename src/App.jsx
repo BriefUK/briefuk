@@ -1,21 +1,37 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── Categories ────────────────────────────────────────────────────────────────
+const BRIT_BIT = "The Brit Bit";
+
 const CATEGORIES = [
   "UK News", "World", "Politics", "Money", "Crime",
-  "Health", "Business", "Technology", "Sport", "Entertainment",
+  "Health", "Business", "Technology", "Sport", "Entertainment", BRIT_BIT,
 ];
 
 const CATEGORY_ICONS = {
   "UK News": "🇬🇧", World: "🌍", Politics: "🏛️", Money: "💰", Crime: "⚖️",
   Health: "🏥", Business: "📈", Technology: "💻", Sport: "⚽", Entertainment: "🎬",
+  [BRIT_BIT]: "✨",
 };
 
 const CATEGORY_COLORS = {
   "UK News": "#E63946", World: "#2A9D8F", Politics: "#6A0572", Money: "#F4A300",
   Crime: "#9D0208", Health: "#06A77D", Business: "#0077B6", Technology: "#00B4D8",
-  Sport: "#2DC653", Entertainment: "#F77F00",
+  Sport: "#2DC653", Entertainment: "#F77F00", [BRIT_BIT]: "#7209B7",
 };
+
+const BRIT_BIT_TAGLINE = "The week's news — but funnier, weirder and more honest than anyone else will tell you";
+const BRIT_BIT_OPENING = "Every Thursday we take the week's biggest stories, find the bits nobody talked about, add a few numbers that'll make you go blimey, throw in something only Britain could produce, and wrap it up with an opinion hot enough to burn your tongue. You're welcome.";
+
+const BRIT_BIT_SECTIONS = [
+  { key: "hot_take", label: "The Hot Take" },
+  { key: "bet_you_didnt_know", label: "Bet You Didn't Know" },
+  { key: "britain_by_numbers", label: "Britain by Numbers" },
+  { key: "what_do_you_reckon", label: "What Do You Reckon" },
+  { key: "you_couldnt_make_it_up", label: "You Couldn't Make It Up" },
+  { key: "story_of_the_week", label: "Story of the Week" },
+  { key: "only_in_britain", label: "Only in Britain" },
+];
 
 const SWIPE_THRESHOLD = 50;
 
@@ -191,7 +207,9 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
           <span className="story-time">{timeAgo(story.pubDate)}</span>
         </div>
         <h2 className="story-headline">{story.title}</h2>
+
         <p className="story-brief">{story.brief}</p>
+
         <div className="story-actions">
           <a href={story.link} target="_blank" rel="noopener noreferrer"
             className="btn-primary" style={{ background: accentColor }}>
@@ -212,6 +230,50 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
   );
 }
 
+// ── The Brit Bit ──────────────────────────────────────────────────────────────
+function BritBitPanel({ edition, loading, accentColor, onRetry }) {
+  if (loading) {
+    return (
+      <section className="main-panel brit-bit-panel">
+        <div className="skel-line" style={{ width: "60%", height: 14, marginBottom: 24 }} />
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} style={{ marginBottom: 22 }}>
+            <div className="skel-line" style={{ width: "30%", height: 16, marginBottom: 10 }} />
+            <div className="skel-line" style={{ width: "100%", height: 13, marginBottom: 6 }} />
+            <div className="skel-line" style={{ width: "85%", height: 13 }} />
+          </div>
+        ))}
+      </section>
+    );
+  }
+
+  if (!edition) {
+    return (
+      <section className="main-panel main-panel-empty">
+        <div className="empty-icon">✨</div>
+        <p className="empty-title">This week's edition isn't ready yet</p>
+        <p className="empty-sub">The Brit Bit refreshes every Thursday at 8am</p>
+        <button className="btn-primary" style={{ background: accentColor }} onClick={onRetry}>
+          Try again
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="main-panel brit-bit-panel">
+      <p className="brit-bit-tagline" style={{ color: accentColor }}>{BRIT_BIT_TAGLINE}</p>
+      <p className="brit-bit-opening">{BRIT_BIT_OPENING}</p>
+      {BRIT_BIT_SECTIONS.map(({ key, label }) => (
+        <div key={key} className="brit-bit-section">
+          <h3 className="brit-bit-section-title" style={{ color: accentColor }}>{label}</h3>
+          <p className="brit-bit-section-body">{edition[key]}</p>
+        </div>
+      ))}
+    </section>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("briefuk-theme") || "dark");
@@ -221,6 +283,9 @@ export default function App() {
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
   const [shared, setShared] = useState(false);
+  const [britBitEdition, setBritBitEdition] = useState(null);
+  const [britBitLoading, setBritBitLoading] = useState(false);
+  const [britBitFetched, setBritBitFetched] = useState(false);
 
   function toggleTheme() {
     const next = theme === "dark" ? "light" : "dark";
@@ -228,6 +293,8 @@ export default function App() {
     localStorage.setItem("briefuk-theme", next);
   }
 
+  // Stories arrive pre-summarised by Claude via the scheduled cron pipeline —
+  // the frontend never calls Claude or fetches RSS directly.
   const fetchCategory = useCallback(async (category) => {
     setLoading((prev) => ({ ...prev, [category]: true }));
     try {
@@ -243,8 +310,27 @@ export default function App() {
     }
   }, []);
 
+  const fetchBritBit = useCallback(async () => {
+    setBritBitLoading(true);
+    try {
+      const res = await fetch("/api/brit-bit");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setBritBitEdition(data.edition);
+    } catch {
+      setBritBitEdition(null);
+    } finally {
+      setBritBitFetched(true);
+      setBritBitLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     setSelectedIndex(0);
+    if (activeCategory === BRIT_BIT) {
+      if (!britBitFetched) fetchBritBit();
+      return;
+    }
     if (!newsByCategory[activeCategory]) fetchCategory(activeCategory);
   }, [activeCategory]);
 
@@ -372,6 +458,14 @@ export default function App() {
         .empty-title { font-weight: 700; color: var(--text-4); margin-bottom: 8px; }
         .empty-sub { font-size: 13px; margin-bottom: 20px; }
 
+        /* ── The Brit Bit ─────────────────────────────────── */
+        .brit-bit-panel { flex: 1; padding: 32px 36px 40px; }
+        .brit-bit-tagline { font-size: 16px; font-weight: 700; margin-bottom: 16px; line-height: 1.5; }
+        .brit-bit-opening { font-size: 14px; line-height: 1.7; color: var(--text-3); margin-bottom: 32px; padding-bottom: 28px; border-bottom: 1px solid var(--border); }
+        .brit-bit-section { margin-bottom: 26px; }
+        .brit-bit-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+        .brit-bit-section-body { font-size: 15px; line-height: 1.7; color: var(--text-2); }
+
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
 
@@ -392,28 +486,39 @@ export default function App() {
       </div>
 
       <div className="layout">
-        <Sidebar
-          items={currentNews}
-          selectedIndex={selectedIndex}
-          onSelect={setSelectedIndex}
-          accentColor={accentColor}
-          loading={isLoading}
-          lastUpdated={lastUpdated}
-          onRefresh={() => fetchCategory(activeCategory)}
-        />
-        <StoryPanel
-          story={selectedStory}
-          index={selectedIndex}
-          total={currentNews.length}
-          accentColor={accentColor}
-          categoryIcon={CATEGORY_ICONS[activeCategory]}
-          loading={isLoading}
-          onPrev={goPrev}
-          onNext={goNext}
-          onShare={handleShare}
-          shared={shared}
-          onRetry={() => fetchCategory(activeCategory)}
-        />
+        {activeCategory === BRIT_BIT ? (
+          <BritBitPanel
+            edition={britBitEdition}
+            loading={britBitLoading}
+            accentColor={accentColor}
+            onRetry={fetchBritBit}
+          />
+        ) : (
+          <>
+            <Sidebar
+              items={currentNews}
+              selectedIndex={selectedIndex}
+              onSelect={setSelectedIndex}
+              accentColor={accentColor}
+              loading={isLoading}
+              lastUpdated={lastUpdated}
+              onRefresh={() => fetchCategory(activeCategory)}
+            />
+            <StoryPanel
+              story={selectedStory}
+              index={selectedIndex}
+              total={currentNews.length}
+              accentColor={accentColor}
+              categoryIcon={CATEGORY_ICONS[activeCategory]}
+              loading={isLoading}
+              onPrev={goPrev}
+              onNext={goNext}
+              onShare={handleShare}
+              shared={shared}
+              onRetry={() => fetchCategory(activeCategory)}
+            />
+          </>
+        )}
       </div>
     </div>
   );
