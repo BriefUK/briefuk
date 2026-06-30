@@ -334,6 +334,53 @@ function BritBitPanel({ edition, loading, accentColor, onRetry }) {
   );
 }
 
+// ── Shortcuts hint ────────────────────────────────────────────────────────────
+const SHORTCUTS = [
+  { keys: ["←", "→"],  label: "Previous / next story" },
+  { keys: ["O"],       label: "Open full article" },
+  { keys: ["D"],       label: "Toggle dark / light" },
+  { keys: ["1–9"],     label: "Jump to category" },
+];
+
+function ShortcutsHint() {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClickOutside(e) {
+      if (!ref.current?.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [open]);
+
+  return (
+    <div className="shortcuts-hint" ref={ref}>
+      {open && (
+        <div className="shortcuts-popover" role="tooltip">
+          {SHORTCUTS.map(({ keys, label }) => (
+            <div className="shortcut-row" key={label}>
+              <span className="shortcut-keys">
+                {keys.map((k) => <kbd key={k}>{k}</kbd>)}
+              </span>
+              <span className="shortcut-label">{label}</span>
+            </div>
+          ))}
+        </div>
+      )}
+      <button
+        className="shortcuts-btn"
+        onClick={() => setOpen((o) => !o)}
+        aria-label="Keyboard shortcuts"
+        aria-expanded={open}
+      >
+        ⌨ Shortcuts
+      </button>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("briefuk-theme") || "dark");
@@ -348,9 +395,11 @@ export default function App() {
   const [britBitFetched, setBritBitFetched] = useState(false);
 
   function toggleTheme() {
-    const next = theme === "dark" ? "light" : "dark";
-    setTheme(next);
-    localStorage.setItem("briefuk-theme", next);
+    setTheme((prev) => {
+      const next = prev === "dark" ? "light" : "dark";
+      localStorage.setItem("briefuk-theme", next);
+      return next;
+    });
   }
 
   // Stories arrive pre-summarised by Claude via the scheduled cron pipeline —
@@ -393,6 +442,33 @@ export default function App() {
     }
     if (!newsByCategory[activeCategory]) fetchCategory(activeCategory);
   }, [activeCategory]);
+
+  // Keyboard shortcuts — registered on every render cycle so handlers always
+  // have the latest selectedStory and activeCategory without stale closures.
+  useEffect(() => {
+    function onKey(e) {
+      // Don't intercept when the user is typing in a form field.
+      const tag = e.target.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
+
+      if (e.key === "ArrowLeft" && activeCategory !== BRIT_BIT) {
+        e.preventDefault(); // prevent page scroll — we own this key here
+        setSelectedIndex((i) => Math.max(i - 1, 0));
+      } else if (e.key === "ArrowRight" && activeCategory !== BRIT_BIT) {
+        e.preventDefault();
+        setSelectedIndex((i) => Math.min(i + 1, (newsByCategory[activeCategory]?.length ?? 1) - 1));
+      } else if (e.key === "o" || e.key === "O") {
+        if (selectedStory?.link) window.open(selectedStory.link, "_blank", "noopener,noreferrer");
+      } else if (e.key === "d" || e.key === "D") {
+        toggleTheme();
+      } else if (e.key >= "1" && e.key <= "9") {
+        const cat = CATEGORIES[parseInt(e.key, 10) - 1];
+        if (cat) setActiveCategory(cat);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   const currentNews = newsByCategory[activeCategory] || [];
   const isLoading = !!loading[activeCategory];
@@ -540,6 +616,16 @@ export default function App() {
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
 
+        /* ── Keyboard shortcuts hint ──────────────────────── */
+        .shortcuts-hint { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+        .shortcuts-btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 11px; font-weight: 600; color: var(--text-5); cursor: pointer; white-space: nowrap; }
+        .shortcuts-btn:hover { color: var(--text-3); border-color: var(--text-5); }
+        .shortcuts-popover { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.25); min-width: 220px; }
+        .shortcut-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .shortcut-keys { display: flex; gap: 4px; flex-shrink: 0; }
+        kbd { background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; font-size: 11px; font-family: inherit; font-weight: 700; color: var(--text-2); }
+        .shortcut-label { font-size: 12px; color: var(--text-4); }
+
         /* ── Mobile ───────────────────────────────────────── */
         @media (max-width: 768px) {
           .sidebar { display: none; }
@@ -594,6 +680,8 @@ export default function App() {
           </>
         )}
       </div>
+
+      <ShortcutsHint />
     </div>
   );
 }
