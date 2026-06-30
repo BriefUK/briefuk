@@ -101,7 +101,7 @@ function Header({ theme, onThemeToggle }) {
 }
 
 // ── Category nav ──────────────────────────────────────────────────────────────
-function CategoryNav({ active, onSelect }) {
+function CategoryNav({ active, onSelect, todayCounts }) {
   const britBitColor = CATEGORY_COLORS[BRIT_BIT];
   const britBitActive = active === BRIT_BIT;
   return (
@@ -109,6 +109,7 @@ function CategoryNav({ active, onSelect }) {
       {CATEGORIES.map((cat) => {
         const isActive = cat === active;
         const color = CATEGORY_COLORS[cat];
+        const count = todayCounts[cat] || 0;
         return (
           <button
             key={cat}
@@ -117,6 +118,7 @@ function CategoryNav({ active, onSelect }) {
             style={isActive ? { background: color, color: "#fff", borderColor: "transparent" } : undefined}
           >
             {CATEGORY_ICONS[cat]} {cat}
+            {count > 0 && <span className="cat-badge">{count}</span>}
           </button>
         );
       })}
@@ -159,8 +161,18 @@ function SidebarSkeleton() {
 }
 
 function Sidebar({ items, selectedIndex, onSelect, accentColor, loading, lastUpdated, onRefresh }) {
+  const sidebarRef = useRef(null);
+  const [showTopBtn, setShowTopBtn] = useState(false);
+
+  function handleSidebarScroll() {
+    setShowTopBtn((sidebarRef.current?.scrollTop ?? 0) > 200);
+  }
+  function scrollToTop() {
+    sidebarRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" ref={sidebarRef} onScroll={handleSidebarScroll}>
       <div className="sidebar-head">
         <span className="sidebar-count">
           <strong style={{ color: accentColor }}>{items.length}</strong> stories
@@ -196,24 +208,58 @@ function Sidebar({ items, selectedIndex, onSelect, accentColor, loading, lastUpd
           </div>
         ))
       )}
+      {showTopBtn && (
+        <button className="back-to-top" onClick={scrollToTop} aria-label="Back to top">↑ Top</button>
+      )}
     </aside>
   );
 }
 
 // ── Story panel ───────────────────────────────────────────────────────────────
-function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, onPrev, onNext, onShare, shared, onRetry }) {
+function buildShareText(story) {
+  return `${story.brief}\n\n${story.link}\n\nvia BriefUK`;
+}
+
+function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, onPrev, onNext, onRetry }) {
   const touchStartX = useRef(null);
+  const touchStartY = useRef(null);
   const [imgFailed, setImgFailed] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const shareRef = useRef(null);
 
-  useEffect(() => { setImgFailed(false); }, [story?.id]);
+  useEffect(() => { setImgFailed(false); setShareOpen(false); }, [story?.id]);
 
-  function handleTouchStart(e) { touchStartX.current = e.touches[0].clientX; }
+  useEffect(() => {
+    if (!shareOpen) return;
+    function onOutside(e) { if (!shareRef.current?.contains(e.target)) setShareOpen(false); }
+    document.addEventListener("mousedown", onOutside);
+    return () => document.removeEventListener("mousedown", onOutside);
+  }, [shareOpen]);
+
+  // Only swipe horizontally when the gesture is more horizontal than vertical,
+  // so normal vertical page scrolling is never intercepted.
+  function handleTouchStart(e) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
   function handleTouchEnd(e) {
     if (touchStartX.current === null) return;
-    const delta = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaX = e.changedTouches[0].clientX - touchStartX.current;
+    const deltaY = e.changedTouches[0].clientY - touchStartY.current;
     touchStartX.current = null;
-    if (Math.abs(delta) < SWIPE_THRESHOLD) return;
-    if (delta < 0) onNext(); else onPrev();
+    touchStartY.current = null;
+    if (Math.abs(deltaX) < SWIPE_THRESHOLD || Math.abs(deltaX) < Math.abs(deltaY)) return;
+    if (deltaX < 0) onNext(); else onPrev();
+  }
+
+  function openShare(url) { window.open(url, "_blank", "noopener,noreferrer"); setShareOpen(false); }
+  function copyLink() {
+    const text = story ? buildShareText(story) : "";
+    navigator.clipboard?.writeText(text).catch(() => {});
+    setCopied(true);
+    setShareOpen(false);
+    setTimeout(() => setCopied(false), 1800);
   }
 
   if (loading) {
@@ -275,9 +321,24 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
             className="btn-primary" style={{ background: accentColor }}>
             Read Full Story →
           </a>
-          <button className="btn-secondary" onClick={() => onShare(story)}>
-            {shared ? "Link copied!" : "Share"}
-          </button>
+          <div className="share-wrap" ref={shareRef}>
+            <button className="btn-secondary" onClick={() => setShareOpen((o) => !o)}>
+              {copied ? "Copied!" : "Share"}
+            </button>
+            {shareOpen && (
+              <div className="share-menu">
+                <button className="share-option" onClick={() => openShare(`https://wa.me/?text=${encodeURIComponent(buildShareText(story))}`)}>
+                  WhatsApp
+                </button>
+                <button className="share-option" onClick={() => openShare(`https://twitter.com/intent/tweet?text=${encodeURIComponent(buildShareText(story))}`)}>
+                  Twitter / X
+                </button>
+                <button className="share-option" onClick={copyLink}>
+                  Copy link
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -389,7 +450,6 @@ export default function App() {
   const [loading, setLoading] = useState({});
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [lastUpdated, setLastUpdated] = useState(null);
-  const [shared, setShared] = useState(false);
   const [britBitEdition, setBritBitEdition] = useState(null);
   const [britBitLoading, setBritBitLoading] = useState(false);
   const [britBitFetched, setBritBitFetched] = useState(false);
@@ -478,11 +538,11 @@ export default function App() {
   const goPrev = () => setSelectedIndex((i) => Math.max(i - 1, 0));
   const goNext = () => setSelectedIndex((i) => Math.min(i + 1, currentNews.length - 1));
 
-  function handleShare(story) {
-    if (navigator.share) { navigator.share({ title: story.title, url: story.link }).catch(() => {}); return; }
-    navigator.clipboard?.writeText(story.link).catch(() => {});
-    setShared(true);
-    setTimeout(() => setShared(false), 1500);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayCounts = {};
+  for (const [cat, stories] of Object.entries(newsByCategory)) {
+    const n = stories.filter((s) => s.pubDate?.slice(0, 10) === todayStr).length;
+    if (n > 0) todayCounts[cat] = n;
   }
 
   return (
@@ -581,7 +641,7 @@ export default function App() {
 
         /* ── Main panel ───────────────────────────────────── */
         .main-panel { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
-        .story-banner { width: 100%; height: 220px; object-fit: cover; display: block; }
+        .story-banner { width: 100%; height: 220px; object-fit: cover; object-position: center top; display: block; }
         .story-banner-gradient { display: flex; align-items: center; justify-content: center; }
         .story-banner-icon { font-size: 72px; }
         .story-banner-skel { background: var(--skel); animation: pulse 1.5s ease-in-out infinite; }
@@ -593,7 +653,11 @@ export default function App() {
         .story-brief { font-size: 15px; line-height: 1.7; color: var(--text-3); margin-bottom: 8px; }
         .word-count-badge { font-size: 11px; color: var(--text-5); font-weight: 600; text-transform: none; letter-spacing: normal; }
         .story-word-count { display: block; margin-bottom: 24px; }
-        .story-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+        .story-actions { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .share-wrap { position: relative; }
+        .share-menu { position: absolute; bottom: calc(100% + 8px); left: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.25); min-width: 140px; z-index: 50; }
+        .share-option { display: block; width: 100%; text-align: left; background: none; border: none; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-2); cursor: pointer; }
+        .share-option:hover { background: var(--surface-2); }
         .btn-primary { color: #fff; border: none; border-radius: 8px; padding: 12px 22px; font-weight: 700; font-size: 14px; text-decoration: none; display: inline-flex; align-items: center; cursor: pointer; }
         .btn-secondary { background: var(--surface-2); color: var(--text-2); border: none; border-radius: 8px; padding: 12px 22px; font-weight: 700; font-size: 14px; cursor: pointer; }
         .story-nav { display: flex; align-items: center; justify-content: space-between; padding: 20px 28px; border-top: 1px solid var(--border); }
@@ -615,6 +679,13 @@ export default function App() {
 
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
+
+        /* ── Category badge ───────────────────────────────── */
+        .cat-badge { display: inline-flex; align-items: center; justify-content: center; background: #E63946; color: #fff; font-size: 10px; font-weight: 800; border-radius: 10px; padding: 1px 5px; min-width: 16px; margin-left: 5px; line-height: 1.4; }
+
+        /* ── Back to top ──────────────────────────────────── */
+        .back-to-top { position: fixed; bottom: 70px; left: 20px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 11px; font-weight: 700; color: var(--text-4); cursor: pointer; z-index: 200; }
+        .back-to-top:hover { color: var(--text-2); border-color: var(--text-5); }
 
         /* ── Keyboard shortcuts hint ──────────────────────── */
         .shortcuts-hint { position: fixed; bottom: 20px; right: 20px; z-index: 300; display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
@@ -640,7 +711,7 @@ export default function App() {
 
       <div className="topbar">
         <Header theme={theme} onThemeToggle={toggleTheme} />
-        <CategoryNav active={activeCategory} onSelect={setActiveCategory} />
+        <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
 
       {activeCategory !== BRIT_BIT && <CategoryHero category={activeCategory} accentColor={accentColor} />}
@@ -673,8 +744,6 @@ export default function App() {
               loading={isLoading}
               onPrev={goPrev}
               onNext={goNext}
-              onShare={handleShare}
-              shared={shared}
               onRetry={() => fetchCategory(activeCategory)}
             />
           </>
