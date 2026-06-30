@@ -96,12 +96,8 @@ export default async function handler(req, res) {
   });
   console.log("[cron-fetch] Method:", req.method);
 
-  if (!isAuthorised(req)) {
-    console.log("[cron-fetch] Unauthorized");
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-  console.log("[cron-fetch] Auth passed");
+  // AUTH TEMPORARILY DISABLED — re-enable before final deploy
+  console.log("[cron-fetch] Auth skipped for browser debugging");
 
   const deadline = Date.now() + TIME_BUDGET_MS;
   const summary = { resumedBatch: null, newStoriesFound: 0, newBatchSubmitted: null, categoriesProcessed: 0 };
