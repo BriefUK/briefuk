@@ -5,7 +5,7 @@ const BRIT_BIT = "The Brit Bit";
 
 const CATEGORIES = [
   "UK News", "World", "Politics", "Money", "Crime",
-  "Health", "Business", "Technology", "Sport", "Entertainment", BRIT_BIT,
+  "Health", "Business", "Technology", "Sport", "Entertainment",
 ];
 
 const CATEGORY_ICONS = {
@@ -17,7 +17,7 @@ const CATEGORY_ICONS = {
 const CATEGORY_COLORS = {
   "UK News": "#E63946", World: "#2A9D8F", Politics: "#6A0572", Money: "#F4A300",
   Crime: "#9D0208", Health: "#06A77D", Business: "#0077B6", Technology: "#00B4D8",
-  Sport: "#2DC653", Entertainment: "#F77F00", [BRIT_BIT]: "#7209B7",
+  Sport: "#2DC653", Entertainment: "#F77F00", [BRIT_BIT]: "#D4AF37",
 };
 
 const BRIT_BIT_TAGLINE = "The week's news — but funnier, weirder and more honest than anyone else will tell you";
@@ -102,6 +102,8 @@ function Header({ theme, onThemeToggle }) {
 
 // ── Category nav ──────────────────────────────────────────────────────────────
 function CategoryNav({ active, onSelect }) {
+  const britBitColor = CATEGORY_COLORS[BRIT_BIT];
+  const britBitActive = active === BRIT_BIT;
   return (
     <nav className="category-nav">
       {CATEGORIES.map((cat) => {
@@ -118,6 +120,14 @@ function CategoryNav({ active, onSelect }) {
           </button>
         );
       })}
+      <span className="nav-divider" aria-hidden="true" />
+      <button
+        className={`category-btn brit-bit-btn${britBitActive ? " brit-bit-active" : ""}`}
+        onClick={() => onSelect(BRIT_BIT)}
+        style={britBitActive ? { background: britBitColor, color: "#111", borderColor: "transparent" } : undefined}
+      >
+        ✨ The Brit Bit
+      </button>
     </nav>
   );
 }
@@ -129,7 +139,6 @@ function CategoryHero({ category, accentColor }) {
       <h1 className="category-hero-title" style={{ color: accentColor }}>
         {CATEGORY_ICONS[category]} {category}
       </h1>
-      <p className="category-hero-tagline">Every story – 60 words or less.</p>
     </div>
   );
 }
@@ -465,14 +474,16 @@ export default function App() {
         .theme-toggle { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 16px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 
         /* ── Category nav ─────────────────────────────────── */
-        .category-nav { max-width: 1280px; margin: 0 auto; display: flex; gap: 8px; overflow-x: auto; padding: 10px 20px 14px; scrollbar-width: none; }
+        .category-nav { max-width: 1280px; margin: 0 auto; display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 10px 20px 14px; scrollbar-width: none; }
         .category-nav::-webkit-scrollbar { display: none; }
         .category-btn { flex-shrink: 0; background: var(--surface); color: var(--text-5); border: 1px solid var(--border); border-radius: 20px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+        .nav-divider { flex-shrink: 0; width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+        .brit-bit-btn { color: #D4AF37; border-color: #D4AF37; }
+        .brit-bit-btn:not(.brit-bit-active):hover { background: #D4AF3718; }
 
         /* ── Category hero ─────────────────────────────────── */
-        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 20px 18px; }
-        .category-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 4px; }
-        .category-hero-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; }
+        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 20px 14px; }
+        .category-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 0; }
 
         /* ── Layout ───────────────────────────────────────── */
         .layout { max-width: 1280px; margin: 0 auto; display: flex; gap: 24px; padding: 24px 20px 60px; align-items: flex-start; }
