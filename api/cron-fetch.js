@@ -108,36 +108,57 @@ async function resumePendingBatch(supabase, deadline) {
 }
 
 export default async function handler(req, res) {
+  console.log("[cron-fetch] Function started");
+  console.log("[cron-fetch] Env vars present:", {
+    ANTHROPIC_API_KEY: !!process.env.ANTHROPIC_API_KEY,
+    SUPABASE_URL: !!process.env.SUPABASE_URL,
+    SUPABASE_SERVICE_ROLE_KEY: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+    CRON_SECRET: !!process.env.CRON_SECRET,
+  });
+  console.log("[cron-fetch] Method:", req.method);
+
   if (!isAuthorised(req)) {
+    console.log("[cron-fetch] Unauthorized — missing or wrong Authorization header");
     res.status(401).json({ error: "Unauthorized" });
     return;
   }
+  console.log("[cron-fetch] Auth passed");
 
   const deadline = Date.now() + TIME_BUDGET_MS;
-  const supabase = getSupabaseService();
   const summary = { resumedBatch: null, newStoriesFound: 0, newBatchSubmitted: null, categoriesProcessed: 0 };
 
   try {
-    // Finish off a batch left over from a previous run before submitting a new one.
-    summary.resumedBatch = await resumePendingBatch(supabase, deadline);
+    console.log("[cron-fetch] Step 1: init Supabase service client");
+    const supabase = getSupabaseService();
 
+    console.log("[cron-fetch] Step 2: resumePendingBatch");
+    summary.resumedBatch = await resumePendingBatch(supabase, deadline);
+    console.log("[cron-fetch] Step 2 done:", summary.resumedBatch);
+
+    console.log("[cron-fetch] Step 3: fetch RSS for all categories");
     const itemsByCategory = new Map();
     for (const category of Object.keys(RSS_FEEDS)) {
+      console.log("[cron-fetch] Fetching category:", category);
       itemsByCategory.set(category, await getCategoryNews(category));
       summary.categoriesProcessed++;
     }
+    console.log("[cron-fetch] Step 3 done, categoriesProcessed:", summary.categoriesProcessed);
 
-    const claimed = new Map(); // url -> story row, one entry per url across all categories
+    console.log("[cron-fetch] Step 4: claim stories by priority");
+    const claimed = new Map();
     for (const category of CATEGORY_PRIORITY) {
       for (const item of itemsByCategory.get(category) ?? []) {
         if (!item.id || claimed.has(item.id)) continue;
         claimed.set(item.id, toStoryRow(item, category));
       }
     }
+    console.log("[cron-fetch] Step 4 done, claimed:", claimed.size);
 
+    console.log("[cron-fetch] Step 5: fetchRecentUrls from Supabase");
     const existingUrls = await fetchRecentUrls(supabase);
+    console.log("[cron-fetch] Step 5 done, existingUrls:", existingUrls.size);
 
-    // URLs already queued in another in-progress batch must not be resubmitted.
+    console.log("[cron-fetch] Step 6: fetch in-flight batches");
     const { data: pendingBatches, error: pendingErr } = await supabase
       .from("batches")
       .select("pending_stories")
@@ -146,14 +167,20 @@ export default async function handler(req, res) {
     const inFlightUrls = new Set(
       (pendingBatches ?? []).flatMap((b) => b.pending_stories.map((s) => s.url))
     );
+    console.log("[cron-fetch] Step 6 done, inFlightUrls:", inFlightUrls.size);
 
     const newStories = [...claimed.values()].filter(
       (s) => !existingUrls.has(s.url) && !inFlightUrls.has(s.url)
     );
     summary.newStoriesFound = newStories.length;
+    console.log("[cron-fetch] newStoriesFound:", summary.newStoriesFound);
 
     if (newStories.length > 0 && Date.now() < deadline) {
+      console.log("[cron-fetch] Step 7: submit Claude Batch API job");
       const batchId = await submitSummaryBatch(newStories);
+      console.log("[cron-fetch] Step 7 done, batchId:", batchId);
+
+      console.log("[cron-fetch] Step 8: insert batch row in Supabase");
       const { error: insertErr } = await supabase.from("batches").insert({
         id: batchId,
         status: "in_progress",
@@ -161,23 +188,28 @@ export default async function handler(req, res) {
       });
       if (insertErr) throw insertErr;
       summary.newBatchSubmitted = batchId;
+      console.log("[cron-fetch] Step 8 done");
 
-      // Best-effort: poll briefly in case it finishes fast, otherwise the
-      // next cron run picks it up via resumePendingBatch.
       while (Date.now() < deadline) {
         const { done, briefs } = await pollSummaryBatch(batchId);
         if (done) {
+          console.log("[cron-fetch] Batch complete, inserting stories");
           await insertFinishedStories(supabase, newStories, briefs);
           const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", batchId);
           if (updateErr) throw updateErr;
+          console.log("[cron-fetch] Stories inserted and batch marked completed");
           break;
         }
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
       }
     }
 
+    console.log("[cron-fetch] Done, summary:", summary);
     res.status(200).json(summary);
   } catch (err) {
-    res.status(500).json({ error: err.message, ...summary });
+    console.error("[cron-fetch] CRASHED at summary state:", summary);
+    console.error("[cron-fetch] Error message:", err.message);
+    console.error("[cron-fetch] Stack trace:", err.stack);
+    res.status(500).json({ error: err.message, stack: err.stack, ...summary });
   }
 }
