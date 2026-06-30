@@ -466,7 +466,7 @@ export default function App() {
 
         /* ── Topbar ───────────────────────────────────────── */
         .topbar { position: sticky; top: 0; z-index: 100; background: var(--topbar-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-2); }
-        .header-inner { max-width: 1280px; margin: 0 auto; padding: 16px 20px 10px; display: flex; align-items: center; justify-content: space-between; }
+        .header-inner { max-width: 1280px; margin: 0 auto; padding: 16px 12px 10px; display: flex; align-items: center; justify-content: space-between; }
         .logo { display: flex; align-items: center; gap: 14px; }
         .logo-text { font-weight: 900; font-size: 40px; letter-spacing: -0.03em; color: var(--text-1); line-height: 1; }
         .logo-accent { color: #E63946; }
@@ -474,7 +474,7 @@ export default function App() {
         .theme-toggle { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 16px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 
         /* ── Category nav ─────────────────────────────────── */
-        .category-nav { max-width: 1280px; margin: 0 auto; display: flex; gap: 8px; align-items: center; overflow-x: auto; padding: 10px 20px 14px; scrollbar-width: none; }
+        .category-nav { max-width: 1280px; margin: 0 auto; display: flex; gap: 6px; align-items: center; overflow-x: auto; padding: 10px 12px 14px; scrollbar-width: none; }
         .category-nav::-webkit-scrollbar { display: none; }
         .category-btn { flex-shrink: 0; background: var(--surface); color: var(--text-5); border: 1px solid var(--border); border-radius: 20px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
         .nav-divider { flex-shrink: 0; width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
@@ -482,11 +482,11 @@ export default function App() {
         .brit-bit-btn:not(.brit-bit-active):hover { background: #D4AF3718; }
 
         /* ── Category hero ─────────────────────────────────── */
-        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 20px 14px; }
+        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 12px 14px; }
         .category-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 0; }
 
         /* ── Layout ───────────────────────────────────────── */
-        .layout { max-width: 1280px; margin: 0 auto; display: flex; gap: 24px; padding: 24px 20px 60px; align-items: flex-start; }
+        .layout { max-width: 1280px; margin: 0 auto; display: flex; gap: 24px; padding: 24px 12px 60px; align-items: flex-start; }
 
         /* ── Sidebar ──────────────────────────────────────── */
         .sidebar { width: 360px; flex-shrink: 0; position: sticky; top: 142px; max-height: calc(100vh - 142px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
