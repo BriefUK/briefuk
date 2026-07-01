@@ -2,18 +2,18 @@ import { RSS_FEEDS, getCategoryNews } from "./_lib/fetchNews.js";
 import { submitSummaryBatch, pollSummaryBatch, storyHash } from "./_lib/claude.js";
 import { getSupabaseService } from "./_lib/supabase.js";
 
-// Triggered by cron-job.org hitting this URL on a schedule. The Bearer
-// token must match CRON_SECRET in the Vercel project's env vars.
 function isAuthorised(req) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // unset only for local dev — never deploy without it
+  if (!secret) return true;
   return req.headers.authorization === `Bearer ${secret}`;
 }
 
-// The Vercel function continues running after the response is sent (up to
-// maxDuration). We respond in ~1s so cron-job.org's 30s timeout is never
-// hit, and all the heavy work (RSS, Supabase, Batch API) runs in the
-// background within Vercel's time window.
+// Vercel kills the function as soon as the response is sent — fire-and-forget
+// does not work. Instead: fetch all categories in parallel (cuts RSS time from
+// ~35s to ~8s), then run the full pipeline synchronously before responding.
+// cron-job.org's 30s client timeout is handled by /api/cron-resume, which
+// runs every 30 min and resolves any in-progress batch that outlasted the
+// cron-fetch window.
 const TIME_BUDGET_MS = 55_000;
 const POLL_INTERVAL_MS = 5_000;
 
@@ -53,7 +53,7 @@ async function fetchRecentUrls(supabase) {
   return urls;
 }
 
-async function insertFinishedStories(supabase, pendingStories, briefs) {
+export async function insertFinishedStories(supabase, pendingStories, briefs) {
   const rows = pendingStories
     .map((s) => {
       const brief = briefs.get(storyHash(s.url));
@@ -63,12 +63,13 @@ async function insertFinishedStories(supabase, pendingStories, briefs) {
       return { ...row, brief, word_count: wordCount };
     })
     .filter(Boolean);
-  if (rows.length === 0) return;
+  if (rows.length === 0) return 0;
   const { error } = await supabase.from("stories").upsert(rows, { onConflict: "url", ignoreDuplicates: true });
   if (error) throw error;
+  return rows.length;
 }
 
-async function resumePendingBatch(supabase, deadline) {
+export async function resumePendingBatch(supabase, deadline) {
   const { data: pending, error } = await supabase
     .from("batches")
     .select("*")
@@ -82,79 +83,14 @@ async function resumePendingBatch(supabase, deadline) {
   while (Date.now() < deadline) {
     const { done, briefs } = await pollSummaryBatch(pending.id);
     if (done) {
-      await insertFinishedStories(supabase, pending.pending_stories, briefs);
+      const written = await insertFinishedStories(supabase, pending.pending_stories, briefs);
       const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", pending.id);
       if (updateErr) throw updateErr;
-      return { resumed: true, finished: true };
+      return { resumed: true, finished: true, written };
     }
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
   }
   return { resumed: true, finished: false };
-}
-
-async function runPipeline(supabase, deadline) {
-  console.log("[cron-fetch] resumePendingBatch");
-  const resumedBatch = await resumePendingBatch(supabase, deadline);
-  console.log("[cron-fetch] resumedBatch:", JSON.stringify(resumedBatch));
-
-  console.log("[cron-fetch] fetching RSS for all categories");
-  const itemsByCategory = new Map();
-  for (const category of Object.keys(RSS_FEEDS)) {
-    itemsByCategory.set(category, await getCategoryNews(category));
-  }
-  console.log("[cron-fetch] RSS done, categories:", itemsByCategory.size);
-
-  const claimed = new Map();
-  for (const category of CATEGORY_PRIORITY) {
-    for (const item of itemsByCategory.get(category) ?? []) {
-      if (!item.id || claimed.has(item.id)) continue;
-      claimed.set(item.id, toStoryRow(item, category));
-    }
-  }
-  console.log("[cron-fetch] claimed:", claimed.size);
-
-  const existingUrls = await fetchRecentUrls(supabase);
-  console.log("[cron-fetch] existingUrls:", existingUrls.size);
-
-  const { data: pendingBatches, error: pendingErr } = await supabase
-    .from("batches")
-    .select("pending_stories")
-    .eq("status", "in_progress");
-  if (pendingErr) throw pendingErr;
-  const inFlightUrls = new Set(
-    (pendingBatches ?? []).flatMap((b) => b.pending_stories.map((s) => s.url))
-  );
-
-  const newStories = [...claimed.values()].filter(
-    (s) => !existingUrls.has(s.url) && !inFlightUrls.has(s.url)
-  );
-  console.log("[cron-fetch] newStoriesFound:", newStories.length);
-
-  if (newStories.length > 0 && Date.now() < deadline) {
-    const batchId = await submitSummaryBatch(newStories);
-    console.log("[cron-fetch] batch submitted:", batchId);
-
-    const { error: insertErr } = await supabase.from("batches").insert({
-      id: batchId,
-      status: "in_progress",
-      pending_stories: newStories,
-    });
-    if (insertErr) throw insertErr;
-
-    while (Date.now() < deadline) {
-      const { done, briefs } = await pollSummaryBatch(batchId);
-      if (done) {
-        await insertFinishedStories(supabase, newStories, briefs);
-        const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", batchId);
-        if (updateErr) throw updateErr;
-        console.log("[cron-fetch] stories written, batch complete");
-        break;
-      }
-      await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-    }
-  }
-
-  console.log("[cron-fetch] pipeline finished");
 }
 
 export default async function handler(req, res) {
@@ -163,18 +99,81 @@ export default async function handler(req, res) {
     return;
   }
 
-  // Respond immediately so cron-job.org gets its 200 well within 30s.
-  // The Vercel function keeps running after res.end() up to maxDuration,
-  // giving the pipeline the full time budget it needs.
-  res.status(202).json({ ok: true, message: "Processing started" });
-
   const deadline = Date.now() + TIME_BUDGET_MS;
   const supabase = getSupabaseService();
+  const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, batchSubmitted: null };
 
   try {
-    await runPipeline(supabase, deadline);
+    // Resolve any batch left over from a previous run that hit the time limit.
+    summary.resumedBatch = await resumePendingBatch(supabase, deadline);
+    console.log("[cron-fetch] resumedBatch:", JSON.stringify(summary.resumedBatch));
+
+    // Fetch all 10 categories in parallel — cuts RSS time from ~35s to ~8s.
+    console.log("[cron-fetch] fetching RSS (parallel)");
+    const categoryList = Object.keys(RSS_FEEDS);
+    const results = await Promise.all(categoryList.map((cat) => getCategoryNews(cat)));
+    const itemsByCategory = new Map(categoryList.map((cat, i) => [cat, results[i]]));
+    summary.categoriesProcessed = categoryList.length;
+    console.log("[cron-fetch] RSS done");
+
+    const claimed = new Map();
+    for (const category of CATEGORY_PRIORITY) {
+      for (const item of itemsByCategory.get(category) ?? []) {
+        if (!item.id || claimed.has(item.id)) continue;
+        claimed.set(item.id, toStoryRow(item, category));
+      }
+    }
+    console.log("[cron-fetch] claimed:", claimed.size);
+
+    const existingUrls = await fetchRecentUrls(supabase);
+    console.log("[cron-fetch] existingUrls:", existingUrls.size);
+
+    const { data: pendingBatches, error: pendingErr } = await supabase
+      .from("batches")
+      .select("pending_stories")
+      .eq("status", "in_progress");
+    if (pendingErr) throw pendingErr;
+    const inFlightUrls = new Set(
+      (pendingBatches ?? []).flatMap((b) => b.pending_stories.map((s) => s.url))
+    );
+
+    const newStories = [...claimed.values()].filter(
+      (s) => !existingUrls.has(s.url) && !inFlightUrls.has(s.url)
+    );
+    summary.newStoriesFound = newStories.length;
+    console.log("[cron-fetch] newStoriesFound:", newStories.length);
+
+    if (newStories.length > 0 && Date.now() < deadline) {
+      const batchId = await submitSummaryBatch(newStories);
+      console.log("[cron-fetch] batch submitted:", batchId);
+
+      const { error: insertErr } = await supabase.from("batches").insert({
+        id: batchId,
+        status: "in_progress",
+        pending_stories: newStories,
+      });
+      if (insertErr) throw insertErr;
+      summary.batchSubmitted = batchId;
+
+      // Poll within the remaining budget. If time runs out, /api/cron-resume
+      // will pick it up and write the results on a subsequent call.
+      while (Date.now() < deadline) {
+        const { done, briefs } = await pollSummaryBatch(batchId);
+        if (done) {
+          const written = await insertFinishedStories(supabase, newStories, briefs);
+          const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", batchId);
+          if (updateErr) throw updateErr;
+          console.log("[cron-fetch] stories written:", written);
+          break;
+        }
+        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      }
+    }
+
+    console.log("[cron-fetch] done:", JSON.stringify(summary));
+    res.status(200).json(summary);
   } catch (err) {
-    console.error("[cron-fetch] pipeline error:", err.message);
-    console.error("[cron-fetch] stack:", err.stack);
+    console.error("[cron-fetch] error:", err.message, err.stack);
+    res.status(500).json({ error: err.message, ...summary });
   }
 }

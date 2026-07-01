@@ -5,6 +5,7 @@
   "installCommand": "npm install",
   "functions": {
     "api/cron-fetch.js": { "maxDuration": 60 },
+    "api/cron-resume.js": { "maxDuration": 30 },
     "api/cron-brit-bit.js": { "maxDuration": 60 }
   }
 }

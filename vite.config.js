@@ -4,6 +4,7 @@ import { parse } from 'node:url'
 import newsHandler from './api/news.js'
 import britBitHandler from './api/brit-bit.js'
 import cronFetchHandler from './api/cron-fetch.js'
+import cronResumeHandler from './api/cron-resume.js'
 import cronBritBitHandler from './api/cron-brit-bit.js'
 
 // Adapts a Vercel-style `(req, res)` handler (res.status().json()) to a
@@ -36,6 +37,7 @@ function apiDevMiddleware() {
       // Lets `npm run dev` trigger the same fetch+summarise pipeline that
       // Vercel Cron runs in production, e.g. `curl -X POST localhost:5173/api/cron-fetch`.
       server.middlewares.use('/api/cron-fetch', vercelHandlerMiddleware(cronFetchHandler))
+      server.middlewares.use('/api/cron-resume', vercelHandlerMiddleware(cronResumeHandler))
       server.middlewares.use('/api/cron-brit-bit', vercelHandlerMiddleware(cronBritBitHandler))
     },
   }
