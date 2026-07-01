@@ -740,6 +740,7 @@ export default function App() {
           .logo-tagline { display: none; }
           .story-headline { font-size: 22px; }
           .category-hero-title { font-size: 18px; }
+          .shortcuts-hint { display: none; }
         }
       `}</style>
 
