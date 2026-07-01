@@ -108,14 +108,21 @@ export default async function handler(req, res) {
     summary.resumedBatch = await resumePendingBatch(supabase, deadline);
     console.log("[cron-fetch] resumedBatch:", JSON.stringify(summary.resumedBatch));
 
-    // Fetch all 10 categories in parallel — cuts RSS time from ~35s to ~8s.
-    console.log("[cron-fetch] fetching RSS (parallel)");
+    // ── Step 1: RSS fetch (parallel) ─────────────────────────────────────
+    console.log("[cron-fetch] STEP 1: fetching RSS for all categories in parallel");
     const categoryList = Object.keys(RSS_FEEDS);
     const results = await Promise.all(categoryList.map((cat) => getCategoryNews(cat)));
     const itemsByCategory = new Map(categoryList.map((cat, i) => [cat, results[i]]));
     summary.categoriesProcessed = categoryList.length;
-    console.log("[cron-fetch] RSS done");
+    let totalRss = 0;
+    for (const [cat, items] of itemsByCategory) {
+      console.log(`  [rss] ${cat}: ${items.length} stories`);
+      totalRss += items.length;
+    }
+    console.log(`[cron-fetch] STEP 1 done: ${totalRss} total stories across all categories`);
 
+    // ── Step 2: priority-claim one URL per story ──────────────────────────
+    console.log("[cron-fetch] STEP 2: claiming stories by category priority");
     const claimed = new Map();
     for (const category of CATEGORY_PRIORITY) {
       for (const item of itemsByCategory.get(category) ?? []) {
@@ -123,10 +130,18 @@ export default async function handler(req, res) {
         claimed.set(item.id, toStoryRow(item, category));
       }
     }
-    console.log("[cron-fetch] claimed:", claimed.size);
+    console.log(`[cron-fetch] STEP 2 done: ${claimed.size} unique stories claimed`);
 
+    // ── Step 3: deduplication against Supabase ────────────────────────────
+    console.log("[cron-fetch] STEP 3: fetching existing URLs from Supabase (last 30 days)");
     const existingUrls = await fetchRecentUrls(supabase);
-    console.log("[cron-fetch] existingUrls:", existingUrls.size);
+    console.log(`[cron-fetch] STEP 3 done: ${existingUrls.size} URLs already in Supabase`);
+
+    // Log a sample to verify URL format matches
+    const sampleClaimed = [...claimed.keys()].slice(0, 2);
+    const sampleExisting = [...existingUrls].slice(0, 2);
+    console.log("[cron-fetch] sample claimed URLs:", JSON.stringify(sampleClaimed));
+    console.log("[cron-fetch] sample existing URLs:", JSON.stringify(sampleExisting));
 
     const { data: pendingBatches, error: pendingErr } = await supabase
       .from("batches")
@@ -136,16 +151,30 @@ export default async function handler(req, res) {
     const inFlightUrls = new Set(
       (pendingBatches ?? []).flatMap((b) => b.pending_stories.map((s) => s.url))
     );
+    console.log(`[cron-fetch] in-flight URLs (pending batches): ${inFlightUrls.size}`);
 
     const newStories = [...claimed.values()].filter(
       (s) => !existingUrls.has(s.url) && !inFlightUrls.has(s.url)
     );
     summary.newStoriesFound = newStories.length;
-    console.log("[cron-fetch] newStoriesFound:", newStories.length);
+    console.log(`[cron-fetch] DEDUP RESULT: ${claimed.size} claimed → ${existingUrls.size} existing → ${inFlightUrls.size} in-flight → ${newStories.length} genuinely new`);
 
+    if (newStories.length === 0) {
+      console.log("[cron-fetch] nothing new — checking if dedup is over-aggressive:");
+      // Sample overlap check: are claimed URLs actually in existingUrls?
+      let overlapCount = 0;
+      for (const s of claimed.values()) {
+        if (existingUrls.has(s.url)) overlapCount++;
+      }
+      console.log(`[cron-fetch]   ${overlapCount} of ${claimed.size} claimed URLs match existingUrls`);
+      console.log(`[cron-fetch]   ${inFlightUrls.size} blocked by in-flight batches`);
+    }
+
+    // ── Step 4: batch submit ──────────────────────────────────────────────
     if (newStories.length > 0 && Date.now() < deadline) {
+      console.log(`[cron-fetch] STEP 4: submitting ${newStories.length} stories to Claude Batch API`);
       const batchId = await submitSummaryBatch(newStories);
-      console.log("[cron-fetch] batch submitted:", batchId);
+      console.log("[cron-fetch] STEP 4 done: batch submitted:", batchId);
 
       const { error: insertErr } = await supabase.from("batches").insert({
         id: batchId,
@@ -155,23 +184,37 @@ export default async function handler(req, res) {
       if (insertErr) throw insertErr;
       summary.batchSubmitted = batchId;
 
-      // Poll within the remaining budget. If time runs out, /api/cron-resume
-      // will pick it up and write the results on a subsequent call.
+      // ── Step 5: poll & write ──────────────────────────────────────────
+      console.log("[cron-fetch] STEP 5: polling for batch completion");
+      let polls = 0;
       while (Date.now() < deadline) {
         const { done, briefs } = await pollSummaryBatch(batchId);
+        polls++;
         if (done) {
+          console.log(`[cron-fetch] STEP 5: batch done after ${polls} poll(s), writing stories`);
           const written = await insertFinishedStories(supabase, newStories, briefs);
           const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", batchId);
           if (updateErr) throw updateErr;
-          console.log("[cron-fetch] stories written:", written);
+          console.log(`[cron-fetch] STEP 5 done: ${written} stories written to Supabase`);
+          summary.written = written;
           break;
         }
+        console.log(`[cron-fetch]   poll ${polls}: still in_progress, waiting ${POLL_INTERVAL_MS}ms`);
         await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+      }
+      if (!summary.written) {
+        console.log("[cron-fetch] STEP 5: time budget exhausted — cron-resume will finish this batch");
       }
     }
 
-    console.log("[cron-fetch] done:", JSON.stringify(summary));
-    res.status(200).json(summary);
+    console.log("[cron-fetch] FINAL SUMMARY:", JSON.stringify({
+      ...summary,
+      rssTotal: totalRss,
+      uniqueClaimed: claimed.size,
+      existingInDb: existingUrls.size,
+      inFlight: inFlightUrls.size,
+    }));
+    res.status(200).json({ ...summary, rssTotal: totalRss, uniqueClaimed: claimed.size, existingInDb: existingUrls.size });
   } catch (err) {
     console.error("[cron-fetch] error:", err.message, err.stack);
     res.status(500).json({ error: err.message, ...summary });
