@@ -104,8 +104,12 @@ export default async function handler(req, res) {
   const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, batchSubmitted: null };
 
   try {
-    // Resolve any batch left over from a previous run that hit the time limit.
-    summary.resumedBatch = await resumePendingBatch(supabase, deadline);
+    // Attempt to resolve any pending batch, but only spend 8s on it.
+    // If the batch is already done on Anthropic's side this resolves in <2s.
+    // If it's still processing, bail immediately and let /api/cron-resume
+    // handle it — don't let it eat the whole time budget meant for RSS + dedup.
+    const resumeDeadline = Date.now() + 8_000;
+    summary.resumedBatch = await resumePendingBatch(supabase, resumeDeadline);
     console.log("[cron-fetch] resumedBatch:", JSON.stringify(summary.resumedBatch));
 
     // ── Step 1: RSS fetch (parallel) ─────────────────────────────────────
