@@ -1,0 +1,23 @@
+<svg width="512" height="512" viewBox="0 0 90 90" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="BriefUK icon">
+  <!-- Red tablet outer frame -->
+  <rect x="0" y="0" width="90" height="90" rx="20" fill="#E63946"/>
+  <!-- Black bezel -->
+  <rect x="10" y="10" width="70" height="70" rx="14" fill="#111111"/>
+  <!-- Camera dot -->
+  <circle cx="45" cy="14.5" r="1.8" fill="#666666"/>
+  <!-- White screen -->
+  <rect x="16" y="19" width="58" height="55" rx="9" fill="#ffffff"/>
+  <!-- Serif B masthead (left) -->
+  <text x="32" y="52" font-family="Georgia, 'Times New Roman', serif" font-weight="700" font-size="38" fill="#E63946" text-anchor="middle">B</text>
+  <!-- News image block (right) -->
+  <rect x="49" y="26" width="20" height="13" rx="1.5" fill="#E63946" opacity="0.25"/>
+  <path d="M49 39 l6 -5 l4 3 l5 -4 l5 6 Z" fill="#E63946" opacity="0.45"/>
+  <circle cx="55" cy="31" r="1.8" fill="#E63946" opacity="0.5"/>
+  <!-- Bold headline -->
+  <rect x="49" y="44" width="20" height="2.5" rx="0.6" fill="#222222"/>
+  <!-- Body text lines -->
+  <rect x="49" y="49" width="20" height="1.8" rx="0.6" fill="#aaaaaa"/>
+  <rect x="49" y="53" width="16" height="1.8" rx="0.6" fill="#aaaaaa"/>
+  <rect x="49" y="59" width="20" height="1.8" rx="0.6" fill="#aaaaaa"/>
+  <rect x="49" y="63" width="14" height="1.8" rx="0.6" fill="#aaaaaa"/>
+</svg>

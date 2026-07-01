@@ -84,10 +84,13 @@ function Header({ theme, onThemeToggle }) {
   return (
     <div className="header-inner">
       <div className="logo">
-        <span className="logo-text">
-          Brief<span className="logo-accent">UK</span>
-        </span>
-        <span className="logo-tagline">Every story – 60 words or less.</span>
+        <img src="/icon.svg" alt="BriefUK" className="logo-icon" />
+        <div className="logo-text-wrap">
+          <span className="logo-text">
+            Brief<span className="logo-accent">UK</span>
+          </span>
+          <span className="logo-tagline">Every story – 60 words or less.</span>
+        </div>
       </div>
       <button
         className="theme-toggle"
@@ -637,7 +640,9 @@ export default function App() {
         /* ── Topbar ───────────────────────────────────────── */
         .topbar { position: sticky; top: 0; z-index: 100; background: var(--topbar-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-2); }
         .header-inner { max-width: 1280px; margin: 0 auto; padding: 16px 12px 10px; display: flex; align-items: center; justify-content: space-between; }
-        .logo { display: flex; align-items: center; gap: 14px; }
+        .logo { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+        .logo-text-wrap { display: flex; align-items: center; gap: 12px; }
         .logo-text { font-weight: 900; font-size: 40px; letter-spacing: -0.03em; color: var(--text-1); line-height: 1; }
         .logo-accent { color: #E63946; }
         .logo-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; letter-spacing: 0.01em; }
@@ -736,6 +741,7 @@ export default function App() {
           .sidebar { display: none; }
           .layout { padding: 16px 0 0; gap: 0; }
           .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 142px); }
+          .logo-icon { width: 28px; height: 28px; }
           .logo-text { font-size: 28px; }
           .logo-tagline { display: none; }
           .story-headline { font-size: 22px; }
