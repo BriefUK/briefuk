@@ -446,6 +446,44 @@ function ShortcutsHint() {
   );
 }
 
+// ── Install banner ───────────────────────────────────────────────────────────
+function InstallBanner() {
+  const [show, setShow] = useState(false);
+  const [prompt, setPrompt] = useState(null);
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+
+  useEffect(() => {
+    if (window.matchMedia("(display-mode: standalone)").matches) return;
+    if (localStorage.getItem("briefuk-pwa-dismissed")) return;
+
+    if (isIOS) { setShow(true); return; }
+
+    function onBeforeInstall(e) { e.preventDefault(); setPrompt(e); setShow(true); }
+    window.addEventListener("beforeinstallprompt", onBeforeInstall);
+    return () => window.removeEventListener("beforeinstallprompt", onBeforeInstall);
+  }, []);
+
+  function dismiss() { localStorage.setItem("briefuk-pwa-dismissed", "1"); setShow(false); }
+
+  async function install() {
+    if (prompt) { prompt.prompt(); const { outcome } = await prompt.userChoice; if (outcome === "accepted") { setShow(false); return; } }
+    dismiss();
+  }
+
+  if (!show) return null;
+  return (
+    <div className="install-banner">
+      <img src="/icon-192.png" alt="" className="install-banner-icon" />
+      <div className="install-banner-text">
+        <strong>Add BriefUK to Home Screen</strong>
+        <span>{isIOS ? "Tap Share → 'Add to Home Screen'" : "Install for fast access & offline reading"}</span>
+      </div>
+      {!isIOS && <button className="install-banner-btn" onClick={install}>Install</button>}
+      <button className="install-banner-dismiss" onClick={dismiss} aria-label="Dismiss">✕</button>
+    </div>
+  );
+}
+
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
   const [theme, setTheme] = useState(() => localStorage.getItem("briefuk-theme") || "dark");
@@ -736,6 +774,15 @@ export default function App() {
         kbd { background: var(--surface-2); border: 1px solid var(--border); border-radius: 5px; padding: 2px 6px; font-size: 11px; font-family: inherit; font-weight: 700; color: var(--text-2); }
         .shortcut-label { font-size: 12px; color: var(--text-4); }
 
+        /* ── Install banner ──────────────────────────────── */
+        .install-banner { display: none; position: fixed; bottom: 0; left: 0; right: 0; z-index: 400; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 16px; align-items: center; gap: 10px; box-shadow: 0 -4px 20px rgba(0,0,0,0.2); }
+        .install-banner-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
+        .install-banner-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+        .install-banner-text strong { font-size: 13px; color: var(--text-1); }
+        .install-banner-text span { font-size: 12px; color: var(--text-4); }
+        .install-banner-btn { flex-shrink: 0; background: #E63946; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .install-banner-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-5); font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
         /* ── Mobile ───────────────────────────────────────── */
         @media (max-width: 768px) {
           .sidebar { display: none; }
@@ -747,6 +794,7 @@ export default function App() {
           .story-headline { font-size: 22px; }
           .category-hero-title { font-size: 18px; }
           .shortcuts-hint { display: none; }
+          .install-banner { display: flex; }
         }
       `}</style>
 
@@ -792,6 +840,7 @@ export default function App() {
       </div>
 
       <ShortcutsHint />
+      <InstallBanner />
     </div>
   );
 }
