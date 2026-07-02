@@ -2,7 +2,6 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createHash } from "node:crypto";
 
 const MODEL = "claude-haiku-4-5";
-const MAX_DESCRIPTION_WORDS = 200;
 
 function getClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -24,10 +23,16 @@ export function storyHash(url) {
 
 const MAX_SUMMARY_WORDS = 60;
 
+// 80 words of source text is enough context for a 60-word summary.
+// Cutting from 200 saves ~160 input tokens per call (~28% total cost reduction
+// since input is the only tunable cost — output length is fixed at ~80 tokens).
+const MAX_DESCRIPTION_WORDS = 80;
+
 function buildSummaryPrompt(title, description) {
   const trimmed = trimWords(description.replace(/…$/, ""), MAX_DESCRIPTION_WORDS);
   const storyText = [title, trimmed].filter(Boolean).join(". ");
-  return `Summarise this news story in 55-60 words — get as close to 60 as you can without ever going over it. Pack in specific detail (names, numbers, places) to reach that length rather than stopping early. Write in plain English. End with a complete sentence and a normal full stop — never use an ellipsis or trail off mid-thought. Respond with the summary text only — no title, no heading, no markdown formatting, no bullet points. Story: ${storyText}`;
+  // Kept short deliberately — fewer instruction tokens = lower cost.
+  return `Summarise in under 60 words. Plain English, specific details, complete sentence ending with a full stop. No title or formatting.\n\nStory: ${storyText}`;
 }
 
 // Safety net for the rare response that ignores the "no markdown" instruction
