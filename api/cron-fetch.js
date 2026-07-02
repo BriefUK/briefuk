@@ -176,11 +176,20 @@ export default async function handler(req, res) {
 
     // ── Step 4: summarise synchronously + write immediately ──────────────
     if (newStories.length > 0) {
-      console.log(`[cron-fetch] STEP 4: summarising ${newStories.length} new stories via sync Claude Haiku calls`);
-      const summaryMap = await summariseStoriesSync(newStories);
+      // Cap per run — prevents a stale backlog (stories that failed in a
+      // previous run and never got written) from firing hundreds of Claude
+      // calls in one shot and draining credits unexpectedly. Normal runs
+      // have 8-20 new stories; the cap only kicks in after multi-hour gaps.
+      const MAX_PER_RUN = 50;
+      const toSummarise = newStories.slice(0, MAX_PER_RUN);
+      if (newStories.length > MAX_PER_RUN) {
+        console.log(`[cron-fetch] ⚠ large backlog: ${newStories.length} new stories found, capping at ${MAX_PER_RUN} this run`);
+      }
+      console.log(`[cron-fetch] STEP 4: calling Claude Haiku for ${toSummarise.length} stories (${newStories.length} total new)`);
+      const summaryMap = await summariseStoriesSync(toSummarise);
       console.log(`[cron-fetch] STEP 4 done: ${summaryMap.size}/${newStories.length} summaries received`);
 
-      const rows = newStories
+      const rows = toSummarise
         .map((s) => {
           const brief = summaryMap.get(s.url);
           if (!brief) return null;
@@ -200,14 +209,26 @@ export default async function handler(req, res) {
       }
     }
 
+    // Human-readable credit-usage line — easy to grep in Vercel logs.
+    const callsMade = summary.written > 0 || summary.newStoriesFound > 0
+      ? Math.min(summary.newStoriesFound, 50)
+      : 0;
+    console.log(`[cron-fetch] 💰 Claude API calls this run: ${callsMade} | written: ${summary.written} | total in DB: ~${existingUrls.size + summary.written}`);
     console.log("[cron-fetch] FINAL SUMMARY:", JSON.stringify({
       ...summary,
       rssTotal: totalRss,
       uniqueClaimed: claimed.size,
       existingInDb: existingUrls.size,
       inFlight: inFlightUrls.size,
+      claudeCallsThisRun: callsMade,
     }));
-    res.status(200).json({ ...summary, rssTotal: totalRss, uniqueClaimed: claimed.size, existingInDb: existingUrls.size });
+    res.status(200).json({
+      ...summary,
+      rssTotal: totalRss,
+      uniqueClaimed: claimed.size,
+      existingInDb: existingUrls.size,
+      claudeCallsThisRun: callsMade,
+    });
   } catch (err) {
     console.error("[cron-fetch] error:", err.message, err.stack);
     res.status(500).json({ error: err.message, ...summary });
