@@ -101,7 +101,7 @@ export default async function handler(req, res) {
 
   const deadline = Date.now() + TIME_BUDGET_MS;
   const supabase = getSupabaseService();
-  const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, written: 0 };
+  const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, written: 0, claudeCallsThisRun: 0 };
 
   try {
     // Attempt to resolve any pending batch, but only spend 8s on it.
@@ -176,15 +176,20 @@ export default async function handler(req, res) {
 
     // ── Step 4: summarise synchronously + write immediately ──────────────
     if (newStories.length > 0) {
-      // Cap per run — prevents a stale backlog (stories that failed in a
-      // previous run and never got written) from firing hundreds of Claude
-      // calls in one shot and draining credits unexpectedly. Normal runs
-      // have 8-20 new stories; the cap only kicks in after multi-hour gaps.
-      const MAX_PER_RUN = 50;
+      // Sort newest-published first so freshness drives what gets written
+      // this run — not which category happens to be first in CATEGORY_PRIORITY.
+      // Without this, Crime/Politics fill the cap and UK News/World/Entertainment
+      // (last in priority, but often high-volume) always get left behind.
+      newStories.sort((a, b) => new Date(b.published_at || 0) - new Date(a.published_at || 0));
+
+      // Cap per run — prevents a backlog from draining credits unexpectedly.
+      const MAX_PER_RUN = 60;
       const toSummarise = newStories.slice(0, MAX_PER_RUN);
       if (newStories.length > MAX_PER_RUN) {
-        console.log(`[cron-fetch] ⚠ large backlog: ${newStories.length} new stories found, capping at ${MAX_PER_RUN} this run`);
+        const cats = [...new Set(toSummarise.map(s => s.category))];
+        console.log(`[cron-fetch] ⚠ large backlog: ${newStories.length} new stories, capping at ${MAX_PER_RUN}. Categories covered: ${cats.join(', ')}`);
       }
+      summary.claudeCallsThisRun = toSummarise.length;
       console.log(`[cron-fetch] STEP 4: calling Claude Haiku for ${toSummarise.length} stories (${newStories.length} total new)`);
       const summaryMap = await summariseStoriesSync(toSummarise);
       console.log(`[cron-fetch] STEP 4 done: ${summaryMap.size}/${newStories.length} summaries received`);
@@ -210,24 +215,19 @@ export default async function handler(req, res) {
     }
 
     // Human-readable credit-usage line — easy to grep in Vercel logs.
-    const callsMade = summary.written > 0 || summary.newStoriesFound > 0
-      ? Math.min(summary.newStoriesFound, 50)
-      : 0;
-    console.log(`[cron-fetch] 💰 Claude API calls this run: ${callsMade} | written: ${summary.written} | total in DB: ~${existingUrls.size + summary.written}`);
+    console.log(`[cron-fetch] 💰 Claude API calls this run: ${summary.claudeCallsThisRun} | written: ${summary.written} | total in DB: ~${existingUrls.size + summary.written}`);
     console.log("[cron-fetch] FINAL SUMMARY:", JSON.stringify({
       ...summary,
       rssTotal: totalRss,
       uniqueClaimed: claimed.size,
       existingInDb: existingUrls.size,
       inFlight: inFlightUrls.size,
-      claudeCallsThisRun: callsMade,
     }));
     res.status(200).json({
       ...summary,
       rssTotal: totalRss,
       uniqueClaimed: claimed.size,
       existingInDb: existingUrls.size,
-      claudeCallsThisRun: callsMade,
     });
   } catch (err) {
     console.error("[cron-fetch] error:", err.message, err.stack);
