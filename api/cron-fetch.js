@@ -1,5 +1,5 @@
 import { RSS_FEEDS, getCategoryNews } from "./_lib/fetchNews.js";
-import { submitSummaryBatch, pollSummaryBatch, storyHash } from "./_lib/claude.js";
+import { summariseStoriesSync, submitSummaryBatch, pollSummaryBatch, storyHash } from "./_lib/claude.js";
 import { getSupabaseService } from "./_lib/supabase.js";
 
 function isAuthorised(req) {
@@ -101,7 +101,7 @@ export default async function handler(req, res) {
 
   const deadline = Date.now() + TIME_BUDGET_MS;
   const supabase = getSupabaseService();
-  const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, batchSubmitted: null };
+  const summary = { resumedBatch: null, categoriesProcessed: 0, newStoriesFound: 0, written: 0 };
 
   try {
     // Attempt to resolve any pending batch, but only spend 8s on it.
@@ -174,40 +174,29 @@ export default async function handler(req, res) {
       console.log(`[cron-fetch]   ${inFlightUrls.size} blocked by in-flight batches`);
     }
 
-    // ── Step 4: batch submit ──────────────────────────────────────────────
-    if (newStories.length > 0 && Date.now() < deadline) {
-      console.log(`[cron-fetch] STEP 4: submitting ${newStories.length} stories to Claude Batch API`);
-      const batchId = await submitSummaryBatch(newStories);
-      console.log("[cron-fetch] STEP 4 done: batch submitted:", batchId);
+    // ── Step 4: summarise synchronously + write immediately ──────────────
+    if (newStories.length > 0) {
+      console.log(`[cron-fetch] STEP 4: summarising ${newStories.length} new stories via sync Claude Haiku calls`);
+      const summaryMap = await summariseStoriesSync(newStories);
+      console.log(`[cron-fetch] STEP 4 done: ${summaryMap.size}/${newStories.length} summaries received`);
 
-      const { error: insertErr } = await supabase.from("batches").insert({
-        id: batchId,
-        status: "in_progress",
-        pending_stories: newStories,
-      });
-      if (insertErr) throw insertErr;
-      summary.batchSubmitted = batchId;
+      const rows = newStories
+        .map((s) => {
+          const brief = summaryMap.get(s.url);
+          if (!brief) return null;
+          const { description, ...row } = s;
+          return { ...row, brief, word_count: brief.trim().split(/\s+/).filter(Boolean).length };
+        })
+        .filter(Boolean);
 
-      // ── Step 5: poll & write ──────────────────────────────────────────
-      console.log("[cron-fetch] STEP 5: polling for batch completion");
-      let polls = 0;
-      while (Date.now() < deadline) {
-        const { done, briefs } = await pollSummaryBatch(batchId);
-        polls++;
-        if (done) {
-          console.log(`[cron-fetch] STEP 5: batch done after ${polls} poll(s), writing stories`);
-          const written = await insertFinishedStories(supabase, newStories, briefs);
-          const { error: updateErr } = await supabase.from("batches").update({ status: "completed" }).eq("id", batchId);
-          if (updateErr) throw updateErr;
-          console.log(`[cron-fetch] STEP 5 done: ${written} stories written to Supabase`);
-          summary.written = written;
-          break;
-        }
-        console.log(`[cron-fetch]   poll ${polls}: still in_progress, waiting ${POLL_INTERVAL_MS}ms`);
-        await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-      }
-      if (!summary.written) {
-        console.log("[cron-fetch] STEP 5: time budget exhausted — cron-resume will finish this batch");
+      if (rows.length > 0) {
+        console.log(`[cron-fetch] STEP 5: writing ${rows.length} stories to Supabase`);
+        const { error: upsertErr } = await supabase
+          .from("stories")
+          .upsert(rows, { onConflict: "url", ignoreDuplicates: true });
+        if (upsertErr) throw upsertErr;
+        summary.written = rows.length;
+        console.log(`[cron-fetch] STEP 5 done: ${rows.length} stories written`);
       }
     }
 

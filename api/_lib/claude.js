@@ -57,6 +57,48 @@ function enforceMaxWords(text, max) {
   return kept.trim() || words.slice(0, max).join(" ") + ".";
 }
 
+// Summarises stories with direct (synchronous) Messages API calls run in
+// parallel. Completes in seconds and writes stories immediately — no batch
+// queue delays. At 8-20 new stories per cron-fetch run the cost is <$0.01
+// per run ($3-4/month) and Haiku's rate limits are never a concern.
+//
+// Returns Map<url, brief>. Stories whose API call fails are omitted from
+// the map and will be picked up as "new" again on the next run.
+export async function summariseStoriesSync(stories, concurrency = 10) {
+  const client = getClient();
+  const results = new Map();
+
+  for (let i = 0; i < stories.length; i += concurrency) {
+    const chunk = stories.slice(i, i + concurrency);
+    const settled = await Promise.allSettled(
+      chunk.map(async (s) => {
+        const message = await client.messages.create({
+          model: MODEL,
+          max_tokens: 200,
+          messages: [{ role: "user", content: buildSummaryPrompt(s.title, s.description) }],
+        });
+        const raw = message.content.find((b) => b.type === "text")?.text?.trim();
+        const brief = raw ? enforceMaxWords(stripLeadingHeading(raw), MAX_SUMMARY_WORDS) : null;
+        return { url: s.url, brief };
+      })
+    );
+    for (const r of settled) {
+      if (r.status === "fulfilled" && r.value.brief) {
+        results.set(r.value.url, r.value.brief);
+      } else if (r.status === "rejected") {
+        // Log the first rejection so the cause is always visible in Vercel logs.
+        if (results.size === 0 && i === 0) {
+          console.error("[claude] summariseStoriesSync error:", r.reason?.message ?? r.reason);
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
+// ── Batch API (kept for cron-resume to drain any stuck in-progress batches) ──
+
 // Submits one Batch API job covering every story (each { url, title, description }).
 // Returns the Anthropic batch id.
 export async function submitSummaryBatch(stories) {
