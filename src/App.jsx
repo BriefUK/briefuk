@@ -625,7 +625,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme} style={activeCategory === BRIT_BIT ? { background: "red" } : undefined}>
+    <div className="app-shell" data-theme={theme} style={{ background: activeCategory === BRIT_BIT ? "red" : "var(--bg)" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -677,7 +677,7 @@ export default function App() {
         .sidebar::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 4px; }
 
         /* ── Shell ────────────────────────────────────────── */
-        .app-shell { min-height: 100vh; background: var(--bg); color: var(--text-1); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .app-shell { min-height: 100vh; color: var(--text-1); font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 
         /* ── Topbar ───────────────────────────────────────── */
         .topbar { position: sticky; top: 0; z-index: 100; background: var(--topbar-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-2); }
