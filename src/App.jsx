@@ -753,8 +753,8 @@ export default function App() {
         .brit-bit-section { margin-bottom: 26px; }
         .brit-bit-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
         .brit-bit-section-body { font-size: 15px; line-height: 1.7; color: var(--text-2); }
-        .app-shell.britbit-page { background: linear-gradient(180deg, #fbf3df 0%, #f6f1e8 100%); }
-        .app-shell.britbit-page[data-theme="dark"] { background: radial-gradient(120% 55% at 50% 0%, rgba(233,180,76,0.16), transparent 55%), linear-gradient(180deg, #141a2a, #0e1320); }
+        .app-shell.britbit-page { background: red !important; }
+        .app-shell.britbit-page[data-theme="dark"] { background: red !important; }
 
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
