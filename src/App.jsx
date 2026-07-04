@@ -625,7 +625,11 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme} style={{ background: activeCategory === BRIT_BIT ? "red" : "var(--bg)" }}>
+    <div className="app-shell" data-theme={theme} style={{ background: activeCategory === BRIT_BIT
+        ? theme === "dark"
+          ? "radial-gradient(120% 55% at 50% 0%, rgba(233,180,76,0.16), transparent 55%), linear-gradient(180deg, #141a2a, #0e1320)"
+          : "linear-gradient(180deg, #fbf3df 0%, #f6f1e8 100%)"
+        : "var(--bg)" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
