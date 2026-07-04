@@ -24,13 +24,13 @@ const BRIT_BIT_TAGLINE = "The week's news — but funnier, weirder and more hone
 const BRIT_BIT_OPENING = "Every Thursday we take the week's biggest stories, find the bits nobody talked about, add a few numbers that'll make you go blimey, throw in something only Britain could produce, and wrap it up with an opinion hot enough to burn your tongue. You're welcome.";
 
 const BRIT_BIT_SECTIONS = [
-  { key: "hot_take", label: "The Hot Take" },
-  { key: "bet_you_didnt_know", label: "Bet You Didn't Know" },
-  { key: "britain_by_numbers", label: "Britain by Numbers" },
-  { key: "what_do_you_reckon", label: "What Do You Reckon" },
-  { key: "you_couldnt_make_it_up", label: "You Couldn't Make It Up" },
-  { key: "story_of_the_week", label: "Story of the Week" },
-  { key: "only_in_britain", label: "Only in Britain" },
+  { key: "hot_take",             label: "The Hot Take",          pill: "#E63946" },
+  { key: "bet_you_didnt_know",   label: "Bet You Didn't Know",   pill: "#1B2A4A" },
+  { key: "britain_by_numbers",   label: "Britain by Numbers",    pill: "#D4AF37" },
+  { key: "what_do_you_reckon",   label: "What Do You Reckon",    pill: "#E63946" },
+  { key: "you_couldnt_make_it_up", label: "You Couldn't Make It Up", pill: "#1B2A4A" },
+  { key: "story_of_the_week",    label: "Story of the Week",     pill: "#D4AF37" },
+  { key: "only_in_britain",      label: "Only in Britain",       pill: "#E63946" },
 ];
 
 const SWIPE_THRESHOLD = 50;
@@ -358,7 +358,7 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
 function BritBitPanel({ edition, loading, accentColor, onRetry }) {
   if (loading) {
     return (
-      <section className="main-panel brit-bit-panel">
+      <section className="brit-bit-panel">
         <div className="skel-line" style={{ width: "60%", height: 14, marginBottom: 24 }} />
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} style={{ marginBottom: 22 }}>
@@ -385,12 +385,12 @@ function BritBitPanel({ edition, loading, accentColor, onRetry }) {
   }
 
   return (
-    <section className="main-panel brit-bit-panel">
+    <section className="brit-bit-panel">
       <p className="brit-bit-tagline" style={{ color: accentColor }}>{BRIT_BIT_TAGLINE}</p>
       <p className="brit-bit-opening">{BRIT_BIT_OPENING}</p>
-      {BRIT_BIT_SECTIONS.map(({ key, label }) => (
-        <div key={key} className="brit-bit-section">
-          <h3 className="brit-bit-section-title" style={{ color: accentColor }}>{label}</h3>
+      {BRIT_BIT_SECTIONS.map(({ key, label, pill }) => (
+        <div key={key} className="brit-bit-card">
+          <span className="brit-bit-pill" style={{ background: pill }}>{label}</span>
           <p className="brit-bit-section-body">{edition[key]}</p>
         </div>
       ))}
@@ -755,11 +755,12 @@ export default function App() {
         .empty-sub { font-size: 13px; margin-bottom: 20px; }
 
         /* ── The Brit Bit ─────────────────────────────────── */
-        .brit-bit-panel { flex: 1; padding: 32px 36px 40px; }
+        .brit-bit-panel { flex: 1; max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
         .brit-bit-tagline { font-size: 16px; font-weight: 700; margin-bottom: 16px; line-height: 1.5; }
-        .brit-bit-opening { font-size: 14px; line-height: 1.7; color: var(--text-3); margin-bottom: 32px; padding-bottom: 28px; border-bottom: 1px solid var(--border); }
-        .brit-bit-section { margin-bottom: 26px; }
-        .brit-bit-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+        .brit-bit-opening { font-size: 14px; line-height: 1.7; color: var(--text-3); margin-bottom: 24px; }
+        .brit-bit-card { border-radius: 16px; padding: 18px 20px 20px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); background: #ffffff; }
+        .app-shell[data-theme="dark"] .brit-bit-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); box-shadow: none; }
+        .brit-bit-pill { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; border-radius: 20px; padding: 3px 10px; margin-bottom: 12px; }
         .brit-bit-section-body { font-size: 15px; line-height: 1.7; color: var(--text-2); }
 
         /* ── Skeleton ─────────────────────────────────────── */
