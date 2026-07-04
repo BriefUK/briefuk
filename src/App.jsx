@@ -554,6 +554,15 @@ export default function App() {
     if (!newsByCategory[activeCategory]) fetchCategory(activeCategory);
   }, [activeCategory]);
 
+  // Apply Brit Bit page background directly on the body so it covers the full
+  // viewport regardless of CSS specificity or service-worker caching of old JS.
+  useEffect(() => {
+    const isBritBit = activeCategory === BRIT_BIT;
+    console.log('[BriefUK] activeCategory:', JSON.stringify(activeCategory), '| BRIT_BIT:', JSON.stringify(BRIT_BIT), '| match:', isBritBit);
+    document.body.style.background = isBritBit ? "red" : "";
+    return () => { document.body.style.background = ""; };
+  }, [activeCategory]);
+
   // Keyboard shortcuts — registered on every render cycle so handlers always
   // have the latest selectedStory and activeCategory without stale closures.
   useEffect(() => {
@@ -621,7 +630,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme} style={activeCategory === BRIT_BIT ? { background: "red" } : undefined}>
+    <div className="app-shell" data-theme={theme}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
