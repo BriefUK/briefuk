@@ -755,7 +755,7 @@ export default function App() {
         .empty-sub { font-size: 13px; margin-bottom: 20px; }
 
         /* ── The Brit Bit ─────────────────────────────────── */
-        .brit-bit-panel { max-width: 1280px; margin: 0 auto; padding: 24px 12px 60px; }
+        .brit-bit-panel { flex: 1; min-width: 0; padding: 24px 0 60px; }
         .brit-bit-tagline { font-size: 16px; font-weight: 700; margin-bottom: 16px; line-height: 1.5; }
         .brit-bit-opening { font-size: 14px; line-height: 1.7; color: var(--text-3); margin-bottom: 24px; }
         .brit-bit-card { border-radius: 16px; padding: 18px 20px 20px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); background: #ffffff; }
@@ -797,6 +797,7 @@ export default function App() {
           .sidebar { display: none; }
           .layout { padding: 16px 0 0; gap: 0; }
           .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 142px); }
+          .brit-bit-panel { padding: 16px 12px 48px; }
           .logo-icon { width: 28px; height: 28px; }
           .logo-text { font-size: 28px; }
           .logo-tagline { display: none; }
