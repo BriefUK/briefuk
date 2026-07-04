@@ -486,6 +486,7 @@ function InstallBanner() {
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
+  const shellRef = useRef(null);
   const [theme, setTheme] = useState(() => localStorage.getItem("briefuk-theme") || "dark");
   const [activeCategory, setActiveCategory] = useState("UK News");
   const [newsByCategory, setNewsByCategory] = useState({});
@@ -554,13 +555,13 @@ export default function App() {
     if (!newsByCategory[activeCategory]) fetchCategory(activeCategory);
   }, [activeCategory]);
 
-  // Apply Brit Bit page background directly on the body so it covers the full
-  // viewport regardless of CSS specificity or service-worker caching of old JS.
+  // Apply Brit Bit page background directly on app-shell via ref so it beats
+  // the CSS class background: var(--bg) rule with no specificity battle.
   useEffect(() => {
     const isBritBit = activeCategory === BRIT_BIT;
-    console.log('[BriefUK] activeCategory:', JSON.stringify(activeCategory), '| BRIT_BIT:', JSON.stringify(BRIT_BIT), '| match:', isBritBit);
-    document.body.style.background = isBritBit ? "red" : "";
-    return () => { document.body.style.background = ""; };
+    console.log(`[BriefUK] activeCategory=${activeCategory} BRIT_BIT=${BRIT_BIT} match=${isBritBit}`);
+    if (shellRef.current) shellRef.current.style.background = isBritBit ? "red" : "";
+    return () => { if (shellRef.current) shellRef.current.style.background = ""; };
   }, [activeCategory]);
 
   // Keyboard shortcuts — registered on every render cycle so handlers always
@@ -630,7 +631,7 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme}>
+    <div ref={shellRef} className="app-shell" data-theme={theme}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
