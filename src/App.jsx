@@ -755,7 +755,7 @@ export default function App() {
         .empty-sub { font-size: 13px; margin-bottom: 20px; }
 
         /* ── The Brit Bit ─────────────────────────────────── */
-        .brit-bit-panel { flex: 1; max-width: 760px; margin: 0 auto; padding: 32px 16px 48px; }
+        .brit-bit-panel { max-width: 1280px; margin: 0 auto; padding: 24px 12px 60px; }
         .brit-bit-tagline { font-size: 16px; font-weight: 700; margin-bottom: 16px; line-height: 1.5; }
         .brit-bit-opening { font-size: 14px; line-height: 1.7; color: var(--text-3); margin-bottom: 24px; }
         .brit-bit-card { border-radius: 16px; padding: 18px 20px 20px; margin-bottom: 14px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); background: #ffffff; }
