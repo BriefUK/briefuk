@@ -621,7 +621,7 @@ export default function App() {
   }
 
   return (
-    <div className={`app-shell${activeCategory === BRIT_BIT ? " britbit-page" : ""}`} data-theme={theme}>
+    <div className="app-shell" data-theme={theme} style={activeCategory === BRIT_BIT ? { background: "red" } : undefined}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -753,8 +753,6 @@ export default function App() {
         .brit-bit-section { margin-bottom: 26px; }
         .brit-bit-section-title { font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
         .brit-bit-section-body { font-size: 15px; line-height: 1.7; color: var(--text-2); }
-        .app-shell.britbit-page { background: red !important; }
-        .app-shell.britbit-page[data-theme="dark"] { background: red !important; }
 
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
