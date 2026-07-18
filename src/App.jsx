@@ -874,6 +874,14 @@ export default function App() {
     if (selectedStory?.id) markRead(selectedStory.id);
   }, [selectedStory?.id]);
 
+  // Desktop: scroll page to top on every story change so the article image
+  // is never hidden behind the sticky header.
+  useEffect(() => {
+    if (window.innerWidth > 768) {
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }, [selectedIndex]);
+
   // Badge = stories published within the last 24 hours that haven't been read yet.
   const window24h = Date.now() - 24 * 60 * 60 * 1000;
   const todayCounts = {};
