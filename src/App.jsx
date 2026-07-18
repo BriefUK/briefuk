@@ -104,44 +104,53 @@ function Header({ theme, onThemeToggle }) {
   );
 }
 
-// ── Category nav ──────────────────────────────────────────────────────────────
-function CategoryNav({ active, onSelect, todayCounts }) {
-  const britBitColor = CATEGORY_COLORS[BRIT_BIT];
-  const britBitActive = active === BRIT_BIT;
-  const blackboardColor = CATEGORY_COLORS[BLACKBOARD];
-  const blackboardActive = active === BLACKBOARD;
+// ── Nav sidebar ───────────────────────────────────────────────────────────────
+function NavSidebar({ active, onSelect, todayCounts }) {
   return (
-    <nav className="category-nav">
+    <nav className="nav-sidebar">
+      <div className="nav-sb-label">News</div>
       {CATEGORIES.map((cat) => {
-        const isActive = cat === active;
+        const isActive = active === cat;
         const color = CATEGORY_COLORS[cat];
         const count = todayCounts[cat] || 0;
         return (
           <button
             key={cat}
-            className="category-btn"
+            className={`nav-sb-item${isActive ? " nav-sb-item-active" : ""}`}
             onClick={() => onSelect(cat)}
-            style={isActive ? { background: color, color: "#fff", borderColor: "transparent" } : undefined}
+            style={isActive ? { color, borderLeftColor: color, background: `${color}12` } : undefined}
           >
-            {CATEGORY_ICONS[cat]} {cat}
+            <span className="nav-sb-icon">{CATEGORY_ICONS[cat]}</span>
+            <span className="nav-sb-text">{cat}</span>
             {count > 0 && <span className="cat-badge">{count}</span>}
           </button>
         );
       })}
-      <span className="nav-divider" aria-hidden="true" />
+      <div className="nav-sb-divider" />
+      <div className="nav-sb-label">Featured</div>
       <button
-        className={`category-btn brit-bit-btn${britBitActive ? " brit-bit-active" : ""}`}
+        className="nav-sb-item nav-sb-featured"
         onClick={() => onSelect(BRIT_BIT)}
-        style={britBitActive ? { background: britBitColor, color: "#111", borderColor: "transparent" } : undefined}
+        style={{
+          background: active === BRIT_BIT ? "#E63946" : undefined,
+          color: active === BRIT_BIT ? "#fff" : "#E63946",
+          borderLeftColor: "transparent",
+        }}
       >
-        ✨ The Brit Bit
+        <span className="nav-sb-icon">✨</span>
+        <span className="nav-sb-text">The Brit Bit</span>
       </button>
       <button
-        className={`category-btn blackboard-btn${blackboardActive ? " blackboard-active" : ""}`}
+        className="nav-sb-item nav-sb-featured"
         onClick={() => onSelect(BLACKBOARD)}
-        style={blackboardActive ? { background: blackboardColor, color: "#fff", borderColor: "transparent" } : undefined}
+        style={{
+          background: active === BLACKBOARD ? "#16324F" : undefined,
+          color: active === BLACKBOARD ? "#fff" : "#16324F",
+          borderLeftColor: "transparent",
+        }}
       >
-        📋 Blackboard
+        <span className="nav-sb-icon">📋</span>
+        <span className="nav-sb-text">Blackboard</span>
       </button>
     </nav>
   );
@@ -894,7 +903,7 @@ export default function App() {
 
         /* ── Topbar ───────────────────────────────────────── */
         .topbar { position: sticky; top: 0; z-index: 100; background: var(--topbar-bg); backdrop-filter: blur(16px); border-bottom: 1px solid var(--border-2); }
-        .header-inner { max-width: 1280px; margin: 0 auto; padding: 16px 12px 10px; display: flex; align-items: center; justify-content: space-between; }
+        .header-inner { max-width: 1400px; margin: 0 auto; padding: 16px 12px 10px; display: flex; align-items: center; justify-content: space-between; }
         .logo { display: flex; align-items: center; gap: 10px; }
         .logo-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
         .logo-text-wrap { display: flex; align-items: center; gap: 12px; }
@@ -903,23 +912,30 @@ export default function App() {
         .logo-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; letter-spacing: 0.01em; }
         .theme-toggle { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 16px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 
-        /* ── Category nav ─────────────────────────────────── */
-        .category-nav { max-width: 1280px; margin: 0 auto; display: flex; gap: 6px; align-items: center; overflow-x: auto; padding: 10px 12px 14px; scrollbar-width: none; }
-        .category-nav::-webkit-scrollbar { display: none; }
-        .category-btn { flex-shrink: 0; background: var(--surface); color: var(--text-5); border: 1px solid var(--border); border-radius: 20px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
-        .nav-divider { flex-shrink: 0; width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
-        .brit-bit-btn { color: #D4AF37; border-color: #D4AF37; }
-        .brit-bit-btn:not(.brit-bit-active):hover { background: #D4AF3718; }
+        /* ── Nav sidebar ──────────────────────────────────── */
+        .nav-sidebar { width: 180px; flex-shrink: 0; position: sticky; top: 74px; max-height: calc(100vh - 74px); overflow-y: auto; padding: 20px 12px 40px 0; scrollbar-width: none; }
+        .nav-sidebar::-webkit-scrollbar { display: none; }
+        .nav-sb-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-5); padding: 0 10px 8px; }
+        .nav-sb-item { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: none; border-left: 2px solid transparent; padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--text-3); cursor: pointer; text-align: left; border-radius: 0 8px 8px 0; transition: background 0.15s, color 0.15s; margin-bottom: 1px; }
+        .nav-sb-item:hover { background: var(--surface-2); color: var(--text-1); }
+        .nav-sb-item-active { font-weight: 700; }
+        .nav-sb-icon { font-size: 13px; flex-shrink: 0; }
+        .nav-sb-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .nav-sb-divider { height: 1px; background: var(--border); margin: 12px 10px; }
+        .nav-sb-featured { border-radius: 8px; margin-bottom: 6px; padding: 8px 10px; font-weight: 700; }
+        .nav-sb-featured:hover { opacity: 0.85; }
 
         /* ── Category hero ─────────────────────────────────── */
-        .category-hero { max-width: 1280px; margin: 0 auto; padding: 4px 12px 14px; }
+        .category-hero { padding: 4px 0 14px; }
         .category-hero-title { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; margin-bottom: 0; }
 
         /* ── Layout ───────────────────────────────────────── */
-        .layout { max-width: 1280px; margin: 0 auto; display: flex; gap: 24px; padding: 24px 12px 60px; align-items: flex-start; }
+        .layout { max-width: 1400px; margin: 0 auto; display: flex; gap: 20px; padding: 24px 12px 60px; align-items: flex-start; }
+        .main-area { flex: 1; min-width: 0; }
+        .inner-layout { display: flex; gap: 24px; align-items: flex-start; }
 
         /* ── Sidebar ──────────────────────────────────────── */
-        .sidebar { width: 360px; flex-shrink: 0; position: sticky; top: 142px; max-height: calc(100vh - 142px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
+        .sidebar { width: 360px; flex-shrink: 0; position: sticky; top: 74px; max-height: calc(100vh - 74px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; }
         .sidebar-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--surface); z-index: 2; }
         .sidebar-count { font-size: 12px; color: var(--text-5); }
         .sidebar-updated { color: var(--text-6); }
@@ -1048,9 +1064,11 @@ export default function App() {
 
         /* ── Mobile ───────────────────────────────────────── */
         @media (max-width: 768px) {
+          .nav-sidebar { display: none; }
           .sidebar { display: none; }
           .layout { padding: 16px 0 0; gap: 0; }
-          .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 142px); }
+          .inner-layout { gap: 0; }
+          .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 74px); }
           .brit-bit-panel { padding: 16px 12px 48px; }
           .bb-panel { padding: 16px 12px 60px; }
           .bb-card { padding: 24px 20px 28px; }
@@ -1069,12 +1087,10 @@ export default function App() {
 
       <div className="topbar">
         <Header theme={theme} onThemeToggle={toggleTheme} />
-        <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
 
-      {activeCategory !== BRIT_BIT && activeCategory !== BLACKBOARD && <CategoryHero category={activeCategory} accentColor={accentColor} />}
-
       <div className="layout">
+        <NavSidebar active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
         {activeCategory === BRIT_BIT ? (
           <BritBitPanel
             edition={britBitEdition}
@@ -1089,28 +1105,31 @@ export default function App() {
             onRetry={fetchBlackboard}
           />
         ) : (
-          <>
-            <Sidebar
-              items={currentNews}
-              selectedIndex={selectedIndex}
-              onSelect={setSelectedIndex}
-              accentColor={accentColor}
-              loading={isLoading}
-              lastUpdated={lastUpdated}
-              onRefresh={() => fetchCategory(activeCategory)}
-            />
-            <StoryPanel
-              story={selectedStory}
-              index={selectedIndex}
-              total={currentNews.length}
-              accentColor={accentColor}
-              categoryIcon={CATEGORY_ICONS[activeCategory]}
-              loading={isLoading}
-              onPrev={goPrev}
-              onNext={goNext}
-              onRetry={() => fetchCategory(activeCategory)}
-            />
-          </>
+          <div className="main-area">
+            <CategoryHero category={activeCategory} accentColor={accentColor} />
+            <div className="inner-layout">
+              <Sidebar
+                items={currentNews}
+                selectedIndex={selectedIndex}
+                onSelect={setSelectedIndex}
+                accentColor={accentColor}
+                loading={isLoading}
+                lastUpdated={lastUpdated}
+                onRefresh={() => fetchCategory(activeCategory)}
+              />
+              <StoryPanel
+                story={selectedStory}
+                index={selectedIndex}
+                total={currentNews.length}
+                accentColor={accentColor}
+                categoryIcon={CATEGORY_ICONS[activeCategory]}
+                loading={isLoading}
+                onPrev={goPrev}
+                onNext={goNext}
+                onRetry={() => fetchCategory(activeCategory)}
+              />
+            </div>
+          </div>
         )}
       </div>
 
