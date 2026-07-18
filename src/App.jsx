@@ -834,7 +834,7 @@ export default function App() {
       if (tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable) return;
 
       // All categories in tab order so ← → can cycle through them all.
-      const allCats = [...CATEGORIES, BRIT_BIT];
+      const allCats = [...CATEGORIES, BRIT_BIT, BLACKBOARD];
       const catIdx = allCats.indexOf(activeCategory);
 
       if (e.key === "ArrowUp" && activeCategory !== BRIT_BIT) {
