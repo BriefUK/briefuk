@@ -104,6 +104,47 @@ function Header({ theme, onThemeToggle }) {
   );
 }
 
+// ── Mobile pill nav (hidden on desktop, shown on mobile) ─────────────────────
+function CategoryNav({ active, onSelect, todayCounts }) {
+  const britBitActive = active === BRIT_BIT;
+  const blackboardActive = active === BLACKBOARD;
+  return (
+    <nav className="category-nav">
+      {CATEGORIES.map((cat) => {
+        const isActive = cat === active;
+        const color = CATEGORY_COLORS[cat];
+        const count = todayCounts[cat] || 0;
+        return (
+          <button
+            key={cat}
+            className="category-btn"
+            onClick={() => onSelect(cat)}
+            style={isActive ? { background: color, color: "#fff", borderColor: "transparent" } : undefined}
+          >
+            {CATEGORY_ICONS[cat]} {cat}
+            {count > 0 && <span className="cat-badge">{count}</span>}
+          </button>
+        );
+      })}
+      <span className="nav-divider" aria-hidden="true" />
+      <button
+        className={`category-btn brit-bit-btn${britBitActive ? " brit-bit-active" : ""}`}
+        onClick={() => onSelect(BRIT_BIT)}
+        style={britBitActive ? { background: "#E63946", color: "#fff", borderColor: "transparent" } : undefined}
+      >
+        ✨ The Brit Bit
+      </button>
+      <button
+        className={`category-btn blackboard-pill-btn${blackboardActive ? " blackboard-pill-active" : ""}`}
+        onClick={() => onSelect(BLACKBOARD)}
+        style={blackboardActive ? { background: "#16324F", color: "#fff", borderColor: "transparent" } : undefined}
+      >
+        📋 Blackboard
+      </button>
+    </nav>
+  );
+}
+
 // ── Nav sidebar ───────────────────────────────────────────────────────────────
 function NavSidebar({ active, onSelect, todayCounts }) {
   return (
@@ -912,6 +953,16 @@ export default function App() {
         .logo-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; letter-spacing: 0.01em; }
         .theme-toggle { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 16px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 
+        /* ── Mobile pill nav (desktop: hidden) ───────────── */
+        .category-nav { display: none; gap: 6px; align-items: center; overflow-x: auto; padding: 10px 12px 14px; scrollbar-width: none; }
+        .category-nav::-webkit-scrollbar { display: none; }
+        .category-btn { flex-shrink: 0; background: var(--surface); color: var(--text-5); border: 1px solid var(--border); border-radius: 20px; padding: 9px 16px; font-size: 13px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+        .nav-divider { flex-shrink: 0; width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
+        .brit-bit-btn { color: #E63946; border-color: #E63946; }
+        .brit-bit-btn:not(.brit-bit-active):hover { background: rgba(230,57,70,0.1); }
+        .blackboard-pill-btn { color: #16324F; border-color: #16324F; }
+        .blackboard-pill-btn:not(.blackboard-pill-active):hover { background: rgba(22,50,79,0.1); }
+
         /* ── Nav sidebar ──────────────────────────────────── */
         .nav-sidebar { width: 180px; flex-shrink: 0; position: sticky; top: 74px; max-height: calc(100vh - 74px); overflow-y: auto; padding: 20px 12px 40px 0; scrollbar-width: none; }
         .nav-sidebar::-webkit-scrollbar { display: none; }
@@ -1065,10 +1116,12 @@ export default function App() {
         /* ── Mobile ───────────────────────────────────────── */
         @media (max-width: 768px) {
           .nav-sidebar { display: none; }
+          .category-nav { display: flex; }
           .sidebar { display: none; }
           .layout { padding: 16px 0 0; gap: 0; }
           .inner-layout { gap: 0; }
-          .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 74px); }
+          .category-hero { padding: 4px 12px 14px; }
+          .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 142px); }
           .brit-bit-panel { padding: 16px 12px 48px; }
           .bb-panel { padding: 16px 12px 60px; }
           .bb-card { padding: 24px 20px 28px; }
@@ -1087,6 +1140,7 @@ export default function App() {
 
       <div className="topbar">
         <Header theme={theme} onThemeToggle={toggleTheme} />
+        <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
 
       <div className="layout">
