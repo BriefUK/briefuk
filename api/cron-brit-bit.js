@@ -16,11 +16,15 @@ const SECTIONS = [
 // Sport and Politics excluded: too fast-moving for a weekly roundup.
 const PREFERRED_CATEGORIES = ["Health", "Money", "Crime", "Technology", "UK News"];
 
-// Words that signal time-sensitive content that reads as stale by Thursday.
-const TIME_SENSITIVE_RE = /\b(tonight|today|yesterday|this weekend|kick-?off|final score|full[- ]time|match day)\b| vs |\bfixture\b|\bscore[sd]?\b/i;
+// Words that signal time-sensitive or sport content to exclude.
+const EXCLUDE_RE = /\b(tonight|today|yesterday|this weekend|kick-?off|final score|full[- ]time|match day|transfer window|hat[- ]trick|grand prix|championship|premier league|world cup|open championship|wimbledon|six nations|test match|innings|wicket|tournament draw)\b| vs |\bfixture\b|\bscore[sd]?\b|\bgoal[s]?\b|\bchampion[s]?\b/i;
 
-function isTimeSensitive(story) {
-  return TIME_SENSITIVE_RE.test(`${story.title} ${story.brief ?? ""}`);
+// Non-UK country/place names that suggest a story is not primarily about Britain.
+const NON_UK_RE = /\b(america[n]?|united states|u\.s\.|michigan|california|texas|new york|australia[n]?|canada|china|russia[n]?|france|germany|south korea|japan|india[n]?|brazil|mexico|federal agency|medicaid|congress|senate|white house)\b/i;
+
+function isExcluded(story) {
+  const text = `${story.title} ${story.brief ?? ""}`;
+  return EXCLUDE_RE.test(text) || NON_UK_RE.test(text);
 }
 
 function isAuthorised(req) {
@@ -122,10 +126,10 @@ export default async function handler(req, res) {
 
     if (storyErr) throw storyErr;
 
-    // Filter time-sensitive stories, then deduplicate by normalised title.
+    // Filter time-sensitive, sport, and non-UK stories, then deduplicate by normalised title.
     const seen = new Set();
     const deduped = (rawStories ?? [])
-      .filter((s) => !isTimeSensitive(s))
+      .filter((s) => !isExcluded(s))
       .filter((s) => {
         const key = s.title.toLowerCase().trim();
         if (seen.has(key)) return false;
