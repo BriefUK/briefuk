@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 
 // ── Categories ────────────────────────────────────────────────────────────────
 const BRIT_BIT = "The Brit Bit";
+const BLACKBOARD = "Blackboard";
 
 const CATEGORIES = [
   "UK News", "World", "Politics", "Money", "Crime",
@@ -11,13 +12,13 @@ const CATEGORIES = [
 const CATEGORY_ICONS = {
   "UK News": "🇬🇧", World: "🌍", Politics: "🏛️", Money: "💰", Crime: "⚖️",
   Health: "🏥", Business: "📈", Technology: "💻", Sport: "⚽", Entertainment: "🎬",
-  [BRIT_BIT]: "✨",
+  [BRIT_BIT]: "✨", [BLACKBOARD]: "📋",
 };
 
 const CATEGORY_COLORS = {
   "UK News": "#E63946", World: "#2A9D8F", Politics: "#6A0572", Money: "#F4A300",
   Crime: "#9D0208", Health: "#06A77D", Business: "#0077B6", Technology: "#00B4D8",
-  Sport: "#2DC653", Entertainment: "#F77F00", [BRIT_BIT]: "#D4AF37",
+  Sport: "#2DC653", Entertainment: "#F77F00", [BRIT_BIT]: "#D4AF37", [BLACKBOARD]: "#16324F",
 };
 
 const BRIT_BIT_TAGLINE = "The week's news — but funnier, weirder and more honest than anyone else will tell you";
@@ -107,6 +108,8 @@ function Header({ theme, onThemeToggle }) {
 function CategoryNav({ active, onSelect, todayCounts }) {
   const britBitColor = CATEGORY_COLORS[BRIT_BIT];
   const britBitActive = active === BRIT_BIT;
+  const blackboardColor = CATEGORY_COLORS[BLACKBOARD];
+  const blackboardActive = active === BLACKBOARD;
   return (
     <nav className="category-nav">
       {CATEGORIES.map((cat) => {
@@ -132,6 +135,13 @@ function CategoryNav({ active, onSelect, todayCounts }) {
         style={britBitActive ? { background: britBitColor, color: "#111", borderColor: "transparent" } : undefined}
       >
         ✨ The Brit Bit
+      </button>
+      <button
+        className={`category-btn blackboard-btn${blackboardActive ? " blackboard-active" : ""}`}
+        onClick={() => onSelect(BLACKBOARD)}
+        style={blackboardActive ? { background: blackboardColor, color: "#fff", borderColor: "transparent" } : undefined}
+      >
+        📋 Blackboard
       </button>
     </nav>
   );
@@ -398,6 +408,179 @@ function BritBitPanel({ edition, loading, accentColor, onRetry }) {
   );
 }
 
+// ── Blackboard ────────────────────────────────────────────────────────────────
+function useScrollFadeIn() {
+  const ref = useRef(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.15 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, visible];
+}
+
+function parseInline(text) {
+  if (!text) return null;
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
+function BlackboardCard({ card }) {
+  const [ref, visible] = useScrollFadeIn();
+  const { content, card_type } = card;
+
+  function renderInner() {
+    switch (card_type) {
+      case "cover":
+        return (
+          <div className="bb-cover">
+            <div className="bb-category-tag">{content.category_tag}</div>
+            <h2 className="bb-headline">
+              {content.headline_parts?.map((part, i) => (
+                <span key={i} style={part.accent ? { color: "#B8541F" } : undefined}>{part.text}</span>
+              ))}
+            </h2>
+            <p className="bb-subtext">{parseInline(content.subtext)}</p>
+            {content.footer && <p className="bb-footer">{content.footer}</p>}
+          </div>
+        );
+      case "stats":
+        return (
+          <div className="bb-stats">
+            <div className="bb-section-label">{content.section_label}</div>
+            <div className="bb-stat-pairs">
+              {content.pairs?.map((pair, i) => (
+                <div key={i} className="bb-stat-pair">
+                  <div className="bb-stat-icon">{pair.icon}</div>
+                  <div className="bb-stat-value">{pair.value}</div>
+                  <div className="bb-stat-label">{pair.label}</div>
+                  <div className="bb-stat-source">{pair.source}</div>
+                </div>
+              ))}
+            </div>
+            {content.insight && <p className="bb-insight">{parseInline(content.insight)}</p>}
+          </div>
+        );
+      case "formula_table":
+        return (
+          <div className="bb-formula-table">
+            <div className="bb-section-label">{content.section_label}</div>
+            <div className="bb-formula">{content.formula}</div>
+            <p className="bb-body">{parseInline(content.body)}</p>
+            <table className="bb-table">
+              <thead>
+                <tr>{content.table_headers?.map((h, i) => <th key={i}>{h}</th>)}</tr>
+              </thead>
+              <tbody>
+                {content.table_rows?.map((row, i) => (
+                  <tr key={i}>{row.map((cell, j) => <td key={j}>{cell}</td>)}</tr>
+                ))}
+              </tbody>
+            </table>
+            {content.footnote && <p className="bb-footnote">{content.footnote}</p>}
+          </div>
+        );
+      case "bars":
+        return (
+          <div className="bb-bars">
+            <div className="bb-section-label">{content.section_label}</div>
+            {content.intro && <p className="bb-body">{content.intro}</p>}
+            <div className="bb-bar-list">
+              {content.bars?.map((bar, i) => (
+                <div key={i} className="bb-bar-row">
+                  <div className="bb-bar-salary">{bar.salary}</div>
+                  <div className="bb-bar-track">
+                    <div className="bb-bar-fill" style={{ width: `${bar.pct}%` }} />
+                  </div>
+                  <div className="bb-bar-label">{bar.label}</div>
+                </div>
+              ))}
+            </div>
+            {content.note && <p className="bb-note">{parseInline(content.note)}</p>}
+          </div>
+        );
+      case "conclusion":
+        return (
+          <div className="bb-conclusion">
+            <div className="bb-section-label">{content.section_label}</div>
+            <h3 className="bb-conclusion-headline">{content.headline}</h3>
+            {content.subtext && <p className="bb-body">{parseInline(content.subtext)}</p>}
+            <div className="bb-highlights">
+              {content.highlights?.map((h, i) => (
+                <div key={i} className="bb-highlight" style={{ borderColor: h.color }}>
+                  <div className="bb-highlight-badge" style={{ background: h.color }}>{h.badge}</div>
+                  <div className="bb-highlight-value">{h.value}</div>
+                  <div className="bb-highlight-desc">{h.description}</div>
+                </div>
+              ))}
+            </div>
+            {content.sources && <p className="bb-sources">{content.sources}</p>}
+          </div>
+        );
+      default:
+        return <p className="bb-body">{JSON.stringify(content)}</p>;
+    }
+  }
+
+  return (
+    <div ref={ref} className={`bb-card${visible ? " bb-card-visible" : ""}`}>
+      <div className="bb-slide-number">0{content.slide_number}</div>
+      {renderInner()}
+    </div>
+  );
+}
+
+function BlackboardPanel({ data, loading, onRetry }) {
+  if (loading) {
+    return (
+      <section className="bb-panel">
+        {Array.from({ length: 3 }).map((_, i) => (
+          <div key={i} className="bb-card bb-card-visible">
+            <div className="skel-line" style={{ width: "20%", height: 10, marginBottom: 20 }} />
+            <div className="skel-line" style={{ width: "80%", height: 32, marginBottom: 12 }} />
+            <div className="skel-line" style={{ width: "100%", height: 14, marginBottom: 8 }} />
+            <div className="skel-line" style={{ width: "70%", height: 14 }} />
+          </div>
+        ))}
+      </section>
+    );
+  }
+
+  if (!data || !data.cards?.length) {
+    return (
+      <section className="bb-panel">
+        <div className="bb-empty">
+          <div className="empty-icon">📋</div>
+          <p className="empty-title">Nothing on the board yet</p>
+          <p className="empty-sub">Check back soon</p>
+          <button className="btn-primary" style={{ background: "#16324F", marginTop: 8 }} onClick={onRetry}>
+            Try again
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="bb-panel">
+      <div className="bb-series-header">{data.series_title}</div>
+      {data.cards.map((card) => <BlackboardCard key={card.id} card={card} />)}
+      <div className="bb-credit">Blackboard by BriefUK</div>
+    </section>
+  );
+}
+
 // ── Shortcuts hint ────────────────────────────────────────────────────────────
 const SHORTCUTS = [
   { keys: ["↑", "↓"],  label: "Previous / next story" },
@@ -506,6 +689,9 @@ export default function App() {
   const [britBitEdition, setBritBitEdition] = useState(null);
   const [britBitLoading, setBritBitLoading] = useState(false);
   const [britBitFetched, setBritBitFetched] = useState(false);
+  const [blackboardData, setBlackboardData] = useState(null);
+  const [blackboardLoading, setBlackboardLoading] = useState(false);
+  const [blackboardFetched, setBlackboardFetched] = useState(false);
 
   function toggleTheme() {
     setTheme((prev) => {
@@ -547,11 +733,30 @@ export default function App() {
     }
   }, []);
 
+  const fetchBlackboard = useCallback(async () => {
+    setBlackboardLoading(true);
+    try {
+      const res = await fetch("/api/blackboard");
+      if (!res.ok) throw new Error("Failed");
+      const data = await res.json();
+      setBlackboardData(data);
+    } catch {
+      setBlackboardData(null);
+    } finally {
+      setBlackboardFetched(true);
+      setBlackboardLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
     localStorage.setItem("briefuk-category", activeCategory);
     setSelectedIndex(0);
     if (activeCategory === BRIT_BIT) {
       if (!britBitFetched) fetchBritBit();
+      return;
+    }
+    if (activeCategory === BLACKBOARD) {
+      if (!blackboardFetched) fetchBlackboard();
       return;
     }
     if (!newsByCategory[activeCategory]) fetchCategory(activeCategory);
@@ -625,13 +830,17 @@ export default function App() {
   }
 
   return (
-    <div className="app-shell" data-theme={theme} style={{ background: activeCategory === BRIT_BIT
+    <div className="app-shell" data-theme={theme} style={{
+      background: activeCategory === BRIT_BIT
         ? theme === "dark"
           ? "radial-gradient(120% 55% at 50% 0%, rgba(233,180,76,0.16), transparent 55%), linear-gradient(180deg, #141a2a, #0e1320)"
           : "linear-gradient(180deg, #fbf3df 0%, #f6f1e8 100%)"
-        : "var(--bg)" }}>
+        : activeCategory === BLACKBOARD
+          ? "url('/blackboard-bg.png') center/cover no-repeat fixed"
+          : "var(--bg)",
+    }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Playfair+Display:wght@400;700;800&display=swap');
         * { box-sizing: border-box; margin: 0; padding: 0; }
         @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 0.8; } }
         a { color: inherit; }
@@ -763,6 +972,51 @@ export default function App() {
         .brit-bit-pill { display: inline-block; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #fff; border-radius: 20px; padding: 3px 10px; margin-bottom: 12px; }
         .brit-bit-section-body { font-size: 15px; line-height: 1.7; color: var(--text-2); }
 
+        /* ── Blackboard ───────────────────────────────────── */
+        .blackboard-btn { color: #16324F; border-color: #16324F; }
+        .blackboard-btn:not(.blackboard-active):hover { background: rgba(22,50,79,0.1); }
+        .bb-panel { flex: 1; min-width: 0; padding: 24px 0 80px; }
+        .bb-series-header { font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.55); margin-bottom: 28px; }
+        .bb-card { background: #FAF8F3; border-radius: 16px; padding: 32px 28px 36px; margin-bottom: 20px; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
+        .bb-card-visible { opacity: 1; transform: translateY(0); }
+        .bb-slide-number { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: #B8541F; margin-bottom: 16px; text-transform: uppercase; }
+        .bb-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #B8541F; margin-bottom: 16px; }
+        .bb-category-tag { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #B8541F; margin-bottom: 20px; }
+        .bb-headline { font-family: 'Playfair Display', Georgia, serif; font-size: 32px; font-weight: 700; line-height: 1.25; color: #16324F; margin-bottom: 20px; }
+        .bb-subtext { font-size: 15px; line-height: 1.75; color: #333; margin-bottom: 12px; }
+        .bb-footer { font-size: 13px; color: #777; font-style: italic; }
+        .bb-stat-pairs { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+        .bb-stat-pair { border-left: 3px solid #B8541F; padding-left: 16px; }
+        .bb-stat-icon { font-size: 20px; margin-bottom: 4px; }
+        .bb-stat-value { font-family: 'Playfair Display', Georgia, serif; font-size: 30px; font-weight: 700; color: #16324F; line-height: 1.1; }
+        .bb-stat-label { font-size: 14px; color: #333; margin-top: 4px; }
+        .bb-stat-source { font-size: 11px; color: #999; margin-top: 2px; }
+        .bb-insight { font-size: 14px; line-height: 1.65; color: #555; padding: 14px 16px; background: rgba(22,50,79,0.06); border-radius: 8px; }
+        .bb-formula { font-family: 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; color: #16324F; margin-bottom: 12px; }
+        .bb-body { font-size: 14px; line-height: 1.7; color: #444; margin-bottom: 20px; }
+        .bb-table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+        .bb-table th { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; color: #16324F; padding: 8px 12px; border-bottom: 2px solid #16324F; text-align: left; }
+        .bb-table td { font-size: 14px; color: #333; padding: 10px 12px; border-bottom: 1px solid rgba(22,50,79,0.1); }
+        .bb-table tr:last-child td { border-bottom: none; }
+        .bb-table td:not(:first-child) { font-weight: 700; color: #16324F; }
+        .bb-footnote { font-size: 11px; color: #999; font-style: italic; margin-top: 8px; }
+        .bb-bar-list { display: flex; flex-direction: column; gap: 14px; margin: 16px 0 20px; }
+        .bb-bar-row { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; }
+        .bb-bar-salary { font-family: 'Playfair Display', Georgia, serif; font-size: 13px; font-weight: 700; color: #16324F; }
+        .bb-bar-track { height: 8px; background: rgba(22,50,79,0.12); border-radius: 4px; overflow: hidden; }
+        .bb-bar-fill { height: 100%; background: linear-gradient(90deg, #16324F, #B8541F); border-radius: 4px; }
+        .bb-bar-label { font-size: 12px; color: #555; white-space: nowrap; }
+        .bb-note { font-size: 13px; color: #555; line-height: 1.6; padding: 12px 14px; background: rgba(184,84,31,0.07); border-radius: 8px; border-left: 3px solid #B8541F; }
+        .bb-conclusion-headline { font-family: 'Playfair Display', Georgia, serif; font-size: 22px; font-weight: 700; color: #16324F; margin-bottom: 12px; line-height: 1.3; }
+        .bb-highlights { display: flex; flex-direction: column; gap: 14px; margin: 20px 0; }
+        .bb-highlight { border-left: 3px solid; padding: 14px 16px; background: rgba(22,50,79,0.04); border-radius: 0 8px 8px 0; }
+        .bb-highlight-badge { font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #fff; display: inline-block; padding: 2px 8px; border-radius: 4px; margin-bottom: 8px; }
+        .bb-highlight-value { font-family: 'Playfair Display', Georgia, serif; font-size: 28px; font-weight: 700; color: #16324F; margin-bottom: 4px; }
+        .bb-highlight-desc { font-size: 13px; color: #555; }
+        .bb-sources { font-size: 11px; color: #999; line-height: 1.6; margin-top: 8px; }
+        .bb-credit { text-align: center; font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-top: 16px; }
+        .bb-empty { padding: 60px 28px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 8px; }
+
         /* ── Skeleton ─────────────────────────────────────── */
         .skel-line { background: var(--skel); border-radius: 4px; animation: pulse 1.5s ease-in-out infinite; }
 
@@ -798,6 +1052,11 @@ export default function App() {
           .layout { padding: 16px 0 0; gap: 0; }
           .main-panel { border-radius: 0; border-left: none; border-right: none; min-height: calc(100vh - 142px); }
           .brit-bit-panel { padding: 16px 12px 48px; }
+          .bb-panel { padding: 16px 12px 60px; }
+          .bb-card { padding: 24px 20px 28px; }
+          .bb-headline { font-size: 26px; }
+          .bb-bar-row { grid-template-columns: 44px 1fr; }
+          .bb-bar-label { grid-column: 1 / -1; font-size: 11px; }
           .logo-icon { width: 28px; height: 28px; }
           .logo-text { font-size: 28px; }
           .logo-tagline { display: none; }
@@ -813,7 +1072,7 @@ export default function App() {
         <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
 
-      {activeCategory !== BRIT_BIT && <CategoryHero category={activeCategory} accentColor={accentColor} />}
+      {activeCategory !== BRIT_BIT && activeCategory !== BLACKBOARD && <CategoryHero category={activeCategory} accentColor={accentColor} />}
 
       <div className="layout">
         {activeCategory === BRIT_BIT ? (
@@ -822,6 +1081,12 @@ export default function App() {
             loading={britBitLoading}
             accentColor={accentColor}
             onRetry={fetchBritBit}
+          />
+        ) : activeCategory === BLACKBOARD ? (
+          <BlackboardPanel
+            data={blackboardData}
+            loading={blackboardLoading}
+            onRetry={fetchBlackboard}
           />
         ) : (
           <>
