@@ -2,9 +2,12 @@ import { getSupabaseAnon } from "./_lib/supabase.js";
 
 export default async function handler(req, res) {
   const supabase = getSupabaseAnon();
+  const now = new Date().toISOString();
+
   const { data, error } = await supabase
     .from("brit_bit_editions")
     .select("*")
+    .gt("expires_at", now)
     .order("edition_date", { ascending: false })
     .limit(1)
     .maybeSingle();
@@ -14,7 +17,7 @@ export default async function handler(req, res) {
     return;
   }
   if (!data) {
-    res.status(404).json({ error: "No edition published yet" });
+    res.status(404).json({ error: "No current edition available" });
     return;
   }
 
