@@ -1146,7 +1146,7 @@ export default function App() {
         .install-banner-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-5); font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; }
 
         /* ── Top strip (base: hidden on mobile) ──────────── */
-        .top-strip { display: none; align-items: center; justify-content: flex-end; gap: 14px; padding: 6px 24px; background: #0a0b0e; }
+        .top-strip { display: none; align-items: center; justify-content: flex-end; gap: 14px; padding: 8px 24px; background: #0a0b0e; }
         .top-strip-date { font-size: 11px; color: #444; letter-spacing: 0.08em; }
         .top-strip-toggle { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1; }
 
@@ -1154,14 +1154,14 @@ export default function App() {
         @media (min-width: 769px) {
           .top-strip { display: flex; background: #0a0b0e; }
           .topbar { background: #16324F; backdrop-filter: none; border-bottom: 4px solid #E63946; }
-          .header-inner { background: transparent; border-bottom: none; padding: 22px 24px; }
+          .header-inner { background: transparent; border-bottom: none; padding: 40px 24px; }
           .logo-icon { display: none; }
           .logo-text-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
-          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 700; color: #fff; letter-spacing: 0; }
-          .logo-tagline { font-size: 12px; color: rgba(255,255,255,0.3); letter-spacing: 0.02em; }
+          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 42px; font-weight: 700; color: #fff; letter-spacing: 0; }
+          .logo-tagline { font-size: 16px; color: rgba(255,255,255,0.3); letter-spacing: 0.02em; }
           .theme-toggle { display: none; }
-          .nav-sidebar { top: 118px; max-height: calc(100vh - 118px); }
-          .sidebar { top: 118px; max-height: calc(100vh - 118px); }
+          .nav-sidebar { top: 160px; max-height: calc(100vh - 160px); }
+          .sidebar { top: 160px; max-height: calc(100vh - 160px); }
         }
 
         /* ── Mobile ───────────────────────────────────────── */
