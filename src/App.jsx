@@ -949,6 +949,10 @@ export default function App() {
           --scrollbar: #cccccc;
         }
 
+        /* ── Dark mode header overrides ──────────────────── */
+        .app-shell[data-theme="dark"] .topbar { background: #060f1a; }
+        .app-shell[data-theme="dark"] .logo-tagline { color: rgba(255,255,255,0.3); }
+
         /* ── Smooth theme transition ──────────────────────── */
         .app-shell, .app-shell * {
           transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
