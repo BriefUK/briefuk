@@ -7,5 +7,10 @@
     "api/cron-fetch.js": { "maxDuration": 60 },
     "api/cron-resume.js": { "maxDuration": 30 },
     "api/cron-brit-bit.js": { "maxDuration": 60 }
-  }
+  },
+  "crons": [
+    { "path": "/api/cron-fetch",    "schedule": "*/30 * * * *" },
+    { "path": "/api/cron-resume",   "schedule": "15,45 * * * *" },
+    { "path": "/api/cron-brit-bit", "schedule": "0 8 * * 4" }
+  ]
 }

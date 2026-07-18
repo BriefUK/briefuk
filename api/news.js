@@ -19,7 +19,8 @@ export default async function handler(req, res) {
     .from("stories")
     .select("url, title, brief, source, image_url, published_at, word_count")
     .eq("category", category)
-    .order("published_at", { ascending: false })
+    .order("published_at", { ascending: false, nullsFirst: false })
+    .order("created_at", { ascending: false })
     .limit(60);
 
   if (error) {
