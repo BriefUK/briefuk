@@ -948,9 +948,9 @@ export default function App() {
         .logo { display: flex; align-items: center; gap: 10px; }
         .logo-icon { width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0; }
         .logo-text-wrap { display: flex; align-items: center; gap: 12px; }
-        .logo-text { font-weight: 900; font-size: 40px; letter-spacing: -0.03em; color: var(--text-1); line-height: 1; }
+        .logo-text { font-weight: 900; font-size: 48px; letter-spacing: -0.03em; color: var(--text-1); line-height: 1; }
         .logo-accent { color: #E63946; }
-        .logo-tagline { font-size: 13px; color: var(--text-5); font-weight: 500; letter-spacing: 0.01em; }
+        .logo-tagline { font-size: 15px; color: var(--text-5); font-weight: 500; letter-spacing: 0.01em; }
         .theme-toggle { background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 6px 12px; font-size: 16px; cursor: pointer; flex-shrink: 0; line-height: 1; }
 
         /* ── Mobile pill nav (desktop: hidden) ───────────── */
@@ -966,14 +966,14 @@ export default function App() {
         /* ── Nav sidebar ──────────────────────────────────── */
         .nav-sidebar { width: 180px; flex-shrink: 0; position: sticky; top: 74px; max-height: calc(100vh - 74px); overflow-y: auto; padding: 20px 12px 40px 0; scrollbar-width: none; }
         .nav-sidebar::-webkit-scrollbar { display: none; }
-        .nav-sb-label { font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-5); padding: 0 10px 8px; }
-        .nav-sb-item { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: none; border-left: 2px solid transparent; padding: 7px 10px; font-size: 13px; font-weight: 600; color: var(--text-3); cursor: pointer; text-align: left; border-radius: 0 8px 8px 0; transition: background 0.15s, color 0.15s; margin-bottom: 1px; }
+        .nav-sb-label { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.14em; color: var(--text-5); padding: 0 12px 10px; }
+        .nav-sb-item { display: flex; align-items: center; gap: 7px; width: 100%; background: none; border: none; border-left: 2px solid transparent; padding: 10px 12px; font-size: 15px; font-weight: 600; color: var(--text-3); cursor: pointer; text-align: left; border-radius: 0 8px 8px 0; transition: background 0.15s, color 0.15s; margin-bottom: 1px; }
         .nav-sb-item:hover { background: var(--surface-2); color: var(--text-1); }
         .nav-sb-item-active { font-weight: 700; }
-        .nav-sb-icon { font-size: 13px; flex-shrink: 0; }
+        .nav-sb-icon { font-size: 15px; flex-shrink: 0; }
         .nav-sb-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .nav-sb-divider { height: 1px; background: var(--border); margin: 12px 10px; }
-        .nav-sb-featured { border-radius: 8px; margin-bottom: 6px; padding: 8px 10px; font-weight: 700; }
+        .nav-sb-featured { border-radius: 8px; margin-bottom: 6px; padding: 11px 12px; font-weight: 700; }
         .nav-sb-featured:hover { opacity: 0.85; }
 
         /* ── Category hero ─────────────────────────────────── */
@@ -1112,6 +1112,11 @@ export default function App() {
         .install-banner-text span { font-size: 12px; color: var(--text-4); }
         .install-banner-btn { flex-shrink: 0; background: #E63946; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
         .install-banner-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-5); font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; }
+
+        /* ── Desktop header padding ───────────────────────── */
+        @media (min-width: 769px) {
+          .header-inner { padding: 24px 12px 20px; }
+        }
 
         /* ── Mobile ───────────────────────────────────────── */
         @media (max-width: 768px) {
