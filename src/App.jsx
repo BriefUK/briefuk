@@ -1168,8 +1168,10 @@ export default function App() {
           .bb-headline { font-size: 26px; }
           .bb-bar-row { grid-template-columns: 44px 1fr; }
           .bb-bar-label { grid-column: 1 / -1; font-size: 11px; }
-          .logo-icon { width: 28px; height: 28px; }
-          .logo-text { font-size: 28px; }
+          .topbar { background: #16324F; backdrop-filter: none; border-bottom: 4px solid #E63946; }
+          .header-inner { padding: 16px 12px; }
+          .logo-icon { display: none; }
+          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 22px; font-weight: 700; color: #fff; letter-spacing: 0; }
           .logo-tagline { display: none; }
           .story-headline { font-size: 22px; }
           .category-hero-title { font-size: 18px; }
