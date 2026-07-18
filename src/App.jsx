@@ -1152,9 +1152,9 @@ export default function App() {
 
         /* ── Desktop header ───────────────────────────────── */
         @media (min-width: 769px) {
-          .top-strip { display: flex; }
-          .topbar { background: transparent; backdrop-filter: none; border-bottom: none; }
-          .header-inner { background: #16324F; border-bottom: 4px solid #E63946; padding: 22px 24px; }
+          .top-strip { display: flex; background: #0a0b0e; }
+          .topbar { background: #16324F; backdrop-filter: none; border-bottom: 4px solid #E63946; }
+          .header-inner { background: transparent; border-bottom: none; padding: 22px 24px; }
           .logo-icon { display: none; }
           .logo-text-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
           .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 700; color: #fff; letter-spacing: 0; }
