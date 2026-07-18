@@ -80,6 +80,25 @@ function groupByDate(items) {
   return groups;
 }
 
+// ── Top strip (desktop only — date + toggle) ─────────────────────────────────
+function TopStrip({ theme, onThemeToggle }) {
+  const dateStr = new Date().toLocaleDateString("en-GB", {
+    weekday: "long", day: "numeric", month: "long", year: "numeric",
+  });
+  return (
+    <div className="top-strip">
+      <span className="top-strip-date">{dateStr}</span>
+      <button
+        className="top-strip-toggle"
+        onClick={onThemeToggle}
+        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      >
+        {theme === "dark" ? "☀️" : "🌙"}
+      </button>
+    </div>
+  );
+}
+
 // ── Header ────────────────────────────────────────────────────────────────────
 function Header({ theme, onThemeToggle }) {
   return (
@@ -1126,9 +1145,23 @@ export default function App() {
         .install-banner-btn { flex-shrink: 0; background: #E63946; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
         .install-banner-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-5); font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; }
 
-        /* ── Desktop header padding ───────────────────────── */
+        /* ── Top strip (base: hidden on mobile) ──────────── */
+        .top-strip { display: none; align-items: center; justify-content: flex-end; gap: 14px; padding: 6px 24px; background: #0a0b0e; }
+        .top-strip-date { font-size: 11px; color: #444; letter-spacing: 0.08em; }
+        .top-strip-toggle { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1; }
+
+        /* ── Desktop header ───────────────────────────────── */
         @media (min-width: 769px) {
-          .header-inner { padding: 24px 12px 20px; }
+          .top-strip { display: flex; }
+          .topbar { background: transparent; backdrop-filter: none; border-bottom: none; }
+          .header-inner { background: #16324F; border-bottom: 4px solid #E63946; padding: 22px 24px; }
+          .logo-icon { display: none; }
+          .logo-text-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
+          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 32px; font-weight: 700; color: #fff; letter-spacing: 0; }
+          .logo-tagline { font-size: 12px; color: rgba(255,255,255,0.3); letter-spacing: 0.02em; }
+          .theme-toggle { display: none; }
+          .nav-sidebar { top: 118px; max-height: calc(100vh - 118px); }
+          .sidebar { top: 118px; max-height: calc(100vh - 118px); }
         }
 
         /* ── Mobile ───────────────────────────────────────── */
@@ -1157,6 +1190,7 @@ export default function App() {
       `}</style>
 
       <div className="topbar">
+        <TopStrip theme={theme} onThemeToggle={toggleTheme} />
         <Header theme={theme} onThemeToggle={toggleTheme} />
         <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
