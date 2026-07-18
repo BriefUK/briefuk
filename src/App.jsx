@@ -80,27 +80,11 @@ function groupByDate(items) {
   return groups;
 }
 
-// ── Top strip (desktop only — date + toggle) ─────────────────────────────────
-function TopStrip({ theme, onThemeToggle }) {
+// ── Header ────────────────────────────────────────────────────────────────────
+function Header({ theme, onThemeToggle }) {
   const dateStr = new Date().toLocaleDateString("en-GB", {
     weekday: "long", day: "numeric", month: "long", year: "numeric",
   });
-  return (
-    <div className="top-strip">
-      <span className="top-strip-date">{dateStr}</span>
-      <button
-        className="top-strip-toggle"
-        onClick={onThemeToggle}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      >
-        {theme === "dark" ? "☀️" : "🌙"}
-      </button>
-    </div>
-  );
-}
-
-// ── Header ────────────────────────────────────────────────────────────────────
-function Header({ theme, onThemeToggle }) {
   return (
     <div className="header-inner">
       <div className="logo">
@@ -109,16 +93,20 @@ function Header({ theme, onThemeToggle }) {
           <span className="logo-text">
             Brief<span className="logo-accent">UK</span>
           </span>
+          <span className="header-vdivider" aria-hidden="true" />
           <span className="logo-tagline">Every story – 60 words or less.</span>
         </div>
       </div>
-      <button
-        className="theme-toggle"
-        onClick={onThemeToggle}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-      >
-        {theme === "dark" ? "☀️" : "🌙"}
-      </button>
+      <div className="header-right">
+        <span className="header-date">{dateStr}</span>
+        <button
+          className="theme-toggle"
+          onClick={onThemeToggle}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? "☀️" : "🌙"}
+        </button>
+      </div>
     </div>
   );
 }
@@ -1145,23 +1133,24 @@ export default function App() {
         .install-banner-btn { flex-shrink: 0; background: #E63946; color: #fff; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; font-weight: 700; cursor: pointer; }
         .install-banner-dismiss { flex-shrink: 0; background: none; border: none; color: var(--text-5); font-size: 16px; cursor: pointer; padding: 4px 8px; line-height: 1; }
 
-        /* ── Top strip (base: hidden on mobile) ──────────── */
-        .top-strip { display: none; align-items: center; justify-content: flex-end; gap: 14px; padding: 8px 24px; background: #0a0b0e; }
-        .top-strip-date { font-size: 11px; color: #444; letter-spacing: 0.08em; }
-        .top-strip-toggle { background: none; border: none; font-size: 14px; cursor: pointer; padding: 2px 4px; line-height: 1; }
+        /* ── Header elements (base: mobile defaults) ─────── */
+        .header-vdivider { display: none; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .header-date { display: none; font-size: 11px; }
 
         /* ── Desktop header ───────────────────────────────── */
         @media (min-width: 769px) {
-          .top-strip { display: flex; background: #0a0b0e; }
           .topbar { background: #16324F; backdrop-filter: none; border-bottom: 4px solid #E63946; }
-          .header-inner { background: transparent; border-bottom: none; padding: 40px 24px; }
+          .header-inner { background: transparent; border-bottom: none; padding: 30px 24px; }
           .logo-icon { display: none; }
-          .logo-text-wrap { flex-direction: column; align-items: flex-start; gap: 4px; }
-          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 42px; font-weight: 700; color: #fff; letter-spacing: 0; }
-          .logo-tagline { font-size: 16px; color: rgba(255,255,255,0.3); letter-spacing: 0.02em; }
-          .theme-toggle { display: none; }
-          .nav-sidebar { top: 160px; max-height: calc(100vh - 160px); }
-          .sidebar { top: 160px; max-height: calc(100vh - 160px); }
+          .logo-text-wrap { flex-direction: row; align-items: center; gap: 20px; }
+          .logo-text { font-family: Georgia, 'Times New Roman', serif; font-size: 38px; font-weight: 700; color: #fff; letter-spacing: 0; }
+          .logo-tagline { font-size: 14px; color: rgba(255,255,255,0.4); letter-spacing: 0.01em; display: block; }
+          .header-vdivider { display: block; width: 1px; height: 30px; background: rgba(255,255,255,0.15); flex-shrink: 0; }
+          .header-date { display: block; color: rgba(255,255,255,0.3); letter-spacing: 0.08em; }
+          .theme-toggle { display: block; }
+          .nav-sidebar { top: 104px; max-height: calc(100vh - 104px); }
+          .sidebar { top: 104px; max-height: calc(100vh - 104px); }
         }
 
         /* ── Mobile ───────────────────────────────────────── */
@@ -1190,7 +1179,6 @@ export default function App() {
       `}</style>
 
       <div className="topbar">
-        <TopStrip theme={theme} onThemeToggle={toggleTheme} />
         <Header theme={theme} onThemeToggle={toggleTheme} />
         <CategoryNav active={activeCategory} onSelect={setActiveCategory} todayCounts={todayCounts} />
       </div>
