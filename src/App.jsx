@@ -290,8 +290,13 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
   const [shareOpen, setShareOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const shareRef = useRef(null);
+  const panelRef = useRef(null);
 
-  useEffect(() => { setImgFailed(false); setShareOpen(false); }, [story?.id]);
+  useEffect(() => {
+    setImgFailed(false);
+    setShareOpen(false);
+    panelRef.current?.scrollTo({ top: 0, behavior: "instant" });
+  }, [story?.id]);
 
   useEffect(() => {
     if (!shareOpen) return;
@@ -355,7 +360,7 @@ function StoryPanel({ story, index, total, accentColor, categoryIcon, loading, o
   }
 
   return (
-    <section className="main-panel" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
+    <section className="main-panel" ref={panelRef} onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
       {story.image && !imgFailed ? (
         <img src={story.image} alt="" className="story-banner" onError={() => setImgFailed(true)} />
       ) : (
