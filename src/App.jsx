@@ -1136,9 +1136,9 @@ export default function App() {
         .bb-series-sidebar { display: none; }
         .bb-series-mobile-nav { display: flex; overflow-x: auto; gap: 8px; padding: 0 4px 20px; scrollbar-width: none; }
         .bb-series-mobile-nav::-webkit-scrollbar { display: none; }
-        .bb-series-pill { flex-shrink: 0; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 8px 14px; color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
-        .bb-series-pill:hover { background: rgba(255,255,255,0.18); color: #fff; }
-        .bb-series-pill-active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.45); color: #fff; }
+        .bb-series-pill { flex-shrink: 0; background: var(--surface-2); border: 1px solid var(--border); border-radius: 20px; padding: 8px 14px; color: var(--text-1); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+        .bb-series-pill:hover { background: var(--surface-1); color: var(--text-1); }
+        .bb-series-pill-active { background: #16324F; border-color: rgba(22,50,79,0.4); color: #fff; }
         .bb-card { background: #FAF8F3; border-radius: 16px; padding: 32px 28px 36px; margin-bottom: 20px; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
         .bb-card-visible { opacity: 1; transform: translateY(0); }
         .bb-image-card { max-width: 600px; margin: 0 auto 20px; border-radius: 16px; overflow: hidden; }
