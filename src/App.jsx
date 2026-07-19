@@ -1141,7 +1141,7 @@ export default function App() {
         .bb-series-pill-active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.45); color: #fff; }
         .bb-card { background: #FAF8F3; border-radius: 16px; padding: 32px 28px 36px; margin-bottom: 20px; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
         .bb-card-visible { opacity: 1; transform: translateY(0); }
-        .bb-image-card { margin-bottom: 20px; border-radius: 16px; overflow: hidden; }
+        .bb-image-card { max-width: 600px; margin: 0 auto 20px; border-radius: 16px; overflow: hidden; }
         .bb-image-card img { width: 100%; display: block; }
         .bb-slide-number { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: #B8541F; margin-bottom: 16px; text-transform: uppercase; }
         .bb-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #B8541F; margin-bottom: 16px; }
@@ -1229,10 +1229,10 @@ export default function App() {
           .nav-sidebar { top: 104px; max-height: calc(100vh - 104px); }
           .sidebar { top: 104px; max-height: calc(100vh - 104px); }
           .bb-series-sidebar { display: flex; flex-direction: column; gap: 6px; width: 220px; flex-shrink: 0; padding: 24px 0 24px 20px; position: sticky; top: 104px; max-height: calc(100vh - 104px); overflow-y: auto; }
-          .bb-series-sidebar-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; padding-left: 2px; }
-          .bb-series-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px; text-align: left; color: rgba(255,255,255,0.65); font-size: 13px; font-family: 'Playfair Display', Georgia, serif; font-weight: 600; cursor: pointer; line-height: 1.4; transition: background 0.2s, color 0.2s, border-color 0.2s; width: 100%; }
-          .bb-series-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
-          .bb-series-btn-active { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); color: #fff; }
+          .bb-series-sidebar-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-5); margin-bottom: 8px; padding-left: 2px; }
+          .bb-series-btn { background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; text-align: left; color: var(--text-1); font-size: 13px; font-family: 'Playfair Display', Georgia, serif; font-weight: 600; cursor: pointer; line-height: 1.4; transition: background 0.2s, color 0.2s, border-color 0.2s; width: 100%; }
+          .bb-series-btn:hover { background: var(--surface-1); color: var(--text-1); }
+          .bb-series-btn-active { background: #16324F; border-color: rgba(22,50,79,0.4); color: #fff; }
           .bb-series-mobile-nav { display: none; }
         }
 
