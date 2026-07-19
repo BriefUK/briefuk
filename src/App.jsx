@@ -193,7 +193,7 @@ function NavSidebar({ active, onSelect, todayCounts }) {
         onClick={() => onSelect(BLACKBOARD)}
         style={{
           background: active === BLACKBOARD ? "#16324F" : undefined,
-          color: active === BLACKBOARD ? "#fff" : "#16324F",
+          color: active === BLACKBOARD ? "#fff" : undefined,
           borderLeftColor: "transparent",
         }}
       >
@@ -597,8 +597,8 @@ function BlackboardCard({ card }) {
 
   if (card_type === "image") {
     return (
-      <div ref={ref} className={`bb-image-card${visible ? " bb-card-visible" : ""}`}>
-        <img src={content.image_url} alt="" loading="lazy" />
+      <div className="bb-image-card bb-card-visible">
+        <img src={content.image_url} alt="" style={{ width: "100%", display: "block" }} />
       </div>
     );
   }
