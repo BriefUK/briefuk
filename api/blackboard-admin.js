@@ -1,17 +1,6 @@
 import { getSupabaseService } from "./_lib/supabase.js";
 
-function isAuthorised(req) {
-  const password = process.env.ADMIN_PASSWORD;
-  if (!password) return false;
-  return req.headers.authorization === `Bearer ${password}`;
-}
-
 export default async function handler(req, res) {
-  if (!isAuthorised(req)) {
-    res.status(401).json({ error: "Unauthorized" });
-    return;
-  }
-
   const supabase = getSupabaseService();
 
   if (req.method === "GET") {

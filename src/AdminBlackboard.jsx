@@ -210,9 +210,6 @@ function defaultForm() {
 }
 
 export default function AdminBlackboard() {
-  const [token, setToken] = useState(() => sessionStorage.getItem("bb_admin_token") || "");
-  const [pwInput, setPwInput] = useState("");
-  const [authError, setAuthError] = useState("");
   const [cards, setCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [apiError, setApiError] = useState("");
@@ -223,21 +220,13 @@ export default function AdminBlackboard() {
   const [jsonError, setJsonError] = useState("");
   const [saving, setSaving] = useState(false);
 
-  const authHeaders = useCallback(() => ({
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json",
-  }), [token]);
+  const jsonHeaders = { "Content-Type": "application/json" };
 
   const loadCards = useCallback(async () => {
     setLoading(true);
     setApiError("");
     try {
-      const res = await fetch(API, { headers: { Authorization: `Bearer ${token}` } });
-      if (res.status === 401) {
-        setToken("");
-        sessionStorage.removeItem("bb_admin_token");
-        return;
-      }
+      const res = await fetch(API);
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setCards(data.cards || []);
@@ -246,25 +235,9 @@ export default function AdminBlackboard() {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, []);
 
-  useEffect(() => { if (token) loadCards(); }, [token, loadCards]);
-
-  async function login(e) {
-    e.preventDefault();
-    setAuthError("");
-    try {
-      const res = await fetch(API, { headers: { Authorization: `Bearer ${pwInput}` } });
-      if (res.ok) {
-        sessionStorage.setItem("bb_admin_token", pwInput);
-        setToken(pwInput);
-      } else {
-        setAuthError("Incorrect password");
-      }
-    } catch {
-      setAuthError("Connection error — check your network");
-    }
-  }
+  useEffect(() => { loadCards(); }, [loadCards]);
 
   function openNew(seriesSlug = "", seriesTitle = "") {
     setEditingId(null);
@@ -323,7 +296,7 @@ export default function AdminBlackboard() {
     try {
       const url = editingId ? `${API}?id=${editingId}` : API;
       const method = editingId ? "PUT" : "POST";
-      const res = await fetch(url, { method, headers: authHeaders(), body: JSON.stringify(body) });
+      const res = await fetch(url, { method, headers: jsonHeaders, body: JSON.stringify(body) });
       if (!res.ok) {
         const d = await res.json().catch(() => ({}));
         throw new Error(d.error || `HTTP ${res.status}`);
@@ -341,10 +314,7 @@ export default function AdminBlackboard() {
     if (!confirm(`Delete "${label}"? This cannot be undone.`)) return;
     setApiError("");
     try {
-      const res = await fetch(`${API}?id=${id}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch(`${API}?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       loadCards();
     } catch (err) {
@@ -357,7 +327,7 @@ export default function AdminBlackboard() {
     try {
       await fetch(`${API}?id=${card.id}`, {
         method: "PUT",
-        headers: authHeaders(),
+        headers: jsonHeaders,
         body: JSON.stringify({ ...card, published: !card.published }),
       });
       loadCards();
@@ -372,31 +342,6 @@ export default function AdminBlackboard() {
       series[card.series_slug] = { title: card.series_title, slug: card.series_slug, cards: [] };
     }
     series[card.series_slug].cards.push(card);
-  }
-
-  // ── Login ──────────────────────────────────────────────────────────────────────
-  if (!token) {
-    return (
-      <>
-        <style>{STYLES}</style>
-        <div className="adm-login-wrap">
-          <form className="adm-login-card" onSubmit={login}>
-            <div className="adm-login-logo">Brief<span>UK</span></div>
-            <div className="adm-login-subtitle">Blackboard Admin</div>
-            <input
-              className="adm-input"
-              type="password"
-              placeholder="Password"
-              value={pwInput}
-              onChange={e => setPwInput(e.target.value)}
-              autoFocus
-            />
-            {authError && <div className="adm-error">{authError}</div>}
-            <button className="adm-btn-primary" type="submit">Sign in</button>
-          </form>
-        </div>
-      </>
-    );
   }
 
   // ── Add / Edit form ───────────────────────────────────────────────────────────
@@ -529,16 +474,7 @@ export default function AdminBlackboard() {
       <div className="adm-wrap">
         <div className="adm-topbar">
           <div className="adm-topbar-logo">Brief<span>UK</span> <span style={{ color: "rgba(255,255,255,0.4)", fontFamily: "inherit", fontSize: 14, fontWeight: 400 }}>/ Blackboard Admin</span></div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <button className="adm-btn-primary adm-btn-sm" onClick={() => openNew()}>+ New Series</button>
-            <button
-              className="adm-btn-ghost adm-btn-sm"
-              style={{ color: "rgba(255,255,255,0.7)", borderColor: "rgba(255,255,255,0.2)" }}
-              onClick={() => { setToken(""); sessionStorage.removeItem("bb_admin_token"); }}
-            >
-              Logout
-            </button>
-          </div>
+          <button className="adm-btn-primary adm-btn-sm" onClick={() => openNew()}>+ New Series</button>
         </div>
 
         <div className="adm-content">
