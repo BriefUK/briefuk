@@ -1130,7 +1130,9 @@ export default function App() {
         /* ── Blackboard ───────────────────────────────────── */
         .blackboard-btn { color: #16324F; border-color: #16324F; }
         .blackboard-btn:not(.blackboard-active):hover { background: rgba(22,50,79,0.1); }
-        .bb-layout { flex: 1; min-width: 0; display: flex; align-items: flex-start; }
+        .bb-overlay { position: fixed; inset: 0; pointer-events: none; z-index: 1; background: rgba(0,0,0,0); transition: background 0.4s ease; }
+        .app-shell[data-theme="dark"] .bb-overlay { background: rgba(0,0,0,0.5); }
+        .bb-layout { flex: 1; min-width: 0; display: flex; align-items: flex-start; position: relative; z-index: 2; }
         .bb-panel { flex: 1; min-width: 0; padding: 24px 0 80px; }
         .bb-series-header { font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.55); margin-bottom: 28px; }
         .bb-series-sidebar { display: none; }
@@ -1278,13 +1280,16 @@ export default function App() {
             onRetry={fetchBritBit}
           />
         ) : activeCategory === BLACKBOARD ? (
-          <BlackboardPanel
-            data={blackboardData}
-            loading={blackboardLoading}
-            onRetry={fetchBlackboard}
-            seriesList={blackboardAllSeries}
-            onSelectSeries={selectBlackboardSeries}
-          />
+          <>
+            <div className="bb-overlay" />
+            <BlackboardPanel
+              data={blackboardData}
+              loading={blackboardLoading}
+              onRetry={fetchBlackboard}
+              seriesList={blackboardAllSeries}
+              onSelectSeries={selectBlackboardSeries}
+            />
+          </>
         ) : (
           <div className="main-area">
             <CategoryHero category={activeCategory} accentColor={accentColor} />
