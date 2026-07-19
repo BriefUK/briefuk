@@ -6,6 +6,7 @@ import britBitHandler from './api/brit-bit.js'
 import cronFetchHandler from './api/cron-fetch.js'
 import cronResumeHandler from './api/cron-resume.js'
 import cronBritBitHandler from './api/cron-brit-bit.js'
+import blackboardAdminHandler from './api/blackboard-admin.js'
 
 // Adapts a Vercel-style `(req, res)` handler (res.status().json()) to a
 // plain Connect middleware so the same handler code runs under `npm run dev`
@@ -39,6 +40,23 @@ function apiDevMiddleware() {
       server.middlewares.use('/api/cron-fetch', vercelHandlerMiddleware(cronFetchHandler))
       server.middlewares.use('/api/cron-resume', vercelHandlerMiddleware(cronResumeHandler))
       server.middlewares.use('/api/cron-brit-bit', vercelHandlerMiddleware(cronBritBitHandler))
+
+      // Admin: needs body parsing for POST/PUT
+      server.middlewares.use('/api/blackboard-admin', async (req, res) => {
+        const { query } = parse(req.url, true)
+        req.query = query
+        if (req.method === 'POST' || req.method === 'PUT') {
+          await new Promise((resolve) => {
+            let raw = ''
+            req.on('data', chunk => { raw += chunk })
+            req.on('end', () => {
+              try { req.body = JSON.parse(raw) } catch { req.body = {} }
+              resolve()
+            })
+          })
+        }
+        vercelHandlerMiddleware(blackboardAdminHandler)(req, res)
+      })
     },
   }
 }
@@ -46,7 +64,7 @@ function apiDevMiddleware() {
 export default defineConfig(({ mode }) => {
   // Load .env into process.env so the dev middleware can read secrets.
   const env = loadEnv(mode, process.cwd(), '')
-  for (const key of ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CRON_SECRET']) {
+  for (const key of ['ANTHROPIC_API_KEY', 'SUPABASE_URL', 'SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'CRON_SECRET', 'ADMIN_PASSWORD']) {
     if (env[key]) process.env[key] = env[key]
   }
 

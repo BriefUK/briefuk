@@ -3,12 +3,21 @@ import ReactDOM from 'react-dom/client'
 import { Analytics } from '@vercel/analytics/react'
 import { SpeedInsights } from '@vercel/speed-insights/react'
 import App from './App.jsx'
+import AdminBlackboard from './AdminBlackboard.jsx'
+
+const isAdmin = window.location.pathname.startsWith('/admin')
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
-    <Analytics />
-    <SpeedInsights />
+    {isAdmin ? (
+      <AdminBlackboard />
+    ) : (
+      <>
+        <App />
+        <Analytics />
+        <SpeedInsights />
+      </>
+    )}
   </React.StrictMode>,
 )
 
