@@ -498,6 +498,59 @@ function parseInline(text) {
   });
 }
 
+function BlackboardShareBtn({ seriesTitle }) {
+  const [open, setOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const wrapRef = useRef(null);
+  const siteUrl = "https://briefuk.co.uk";
+  const shareText = `Check this out on BriefUK: ${seriesTitle}`;
+
+  useEffect(() => {
+    if (!open) return;
+    function onOut(e) {
+      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onOut);
+    return () => document.removeEventListener("mousedown", onOut);
+  }, [open]);
+
+  function handleClick() {
+    if (navigator.share) {
+      navigator.share({ title: "BriefUK Blackboard", text: shareText, url: siteUrl }).catch(() => {});
+      return;
+    }
+    setOpen(o => !o);
+  }
+
+  function copyLink() {
+    navigator.clipboard.writeText(siteUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => { setCopied(false); setOpen(false); }, 2000);
+    });
+  }
+
+  return (
+    <div className="bb-share-wrap" ref={wrapRef}>
+      <button className="bb-share-btn" onClick={handleClick} aria-label="Share">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/>
+          <polyline points="16 6 12 2 8 6"/>
+          <line x1="12" y1="2" x2="12" y2="15"/>
+        </svg>
+        Share
+      </button>
+      {open && (
+        <div className="bb-share-menu">
+          <a className="bb-share-item" href={`https://wa.me/?text=${encodeURIComponent(shareText + " — " + siteUrl)}`} target="_blank" rel="noopener noreferrer">💬 WhatsApp</a>
+          <a className="bb-share-item" href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(siteUrl)}`} target="_blank" rel="noopener noreferrer">𝕏 X / Twitter</a>
+          <a className="bb-share-item" href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(siteUrl)}`} target="_blank" rel="noopener noreferrer">f Facebook</a>
+          <button className="bb-share-item" onClick={copyLink}>{copied ? "✓ Copied!" : "🔗 Copy link"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function BlackboardCard({ card }) {
   const [ref, visible] = useScrollFadeIn();
   const { content, card_type } = card;
@@ -597,17 +650,23 @@ function BlackboardCard({ card }) {
 
   if (card_type === "image") {
     return (
-      <div className="bb-image-card bb-card-visible">
-        <img src={content.image_url} alt="" style={{ width: "100%", display: "block" }} />
-      </div>
+      <>
+        <div className="bb-image-card bb-card-visible">
+          <img src={content.image_url} alt="" style={{ width: "100%", display: "block" }} />
+        </div>
+        <BlackboardShareBtn seriesTitle={card.series_title} />
+      </>
     );
   }
 
   return (
-    <div ref={ref} className={`bb-card${visible ? " bb-card-visible" : ""}`}>
-      <div className="bb-slide-number">0{content.slide_number}</div>
-      {renderInner()}
-    </div>
+    <>
+      <div ref={ref} className={`bb-card${visible ? " bb-card-visible" : ""}`}>
+        <div className="bb-slide-number">0{content.slide_number}</div>
+        {renderInner()}
+      </div>
+      <BlackboardShareBtn seriesTitle={card.series_title} />
+    </>
   );
 }
 
@@ -1145,6 +1204,12 @@ export default function App() {
         .bb-card-visible { opacity: 1; transform: translateY(0); }
         .bb-image-card { max-width: 750px; width: 100%; margin: 0 auto 20px; border-radius: 16px; overflow: hidden; }
         .bb-image-card img { width: 100%; height: auto; display: block; }
+        .bb-share-wrap { position: relative; display: flex; justify-content: flex-end; margin-top: -4px; margin-bottom: 16px; }
+        .bb-share-btn { display: inline-flex; align-items: center; gap: 5px; background: none; border: none; color: #B8541F; font-size: 12px; font-weight: 700; cursor: pointer; padding: 5px 8px; border-radius: 6px; transition: background 0.15s; letter-spacing: 0.02em; }
+        .bb-share-btn:hover { background: rgba(184,84,31,0.09); }
+        .bb-share-menu { position: absolute; top: calc(100% + 4px); right: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 20px rgba(0,0,0,0.2); min-width: 155px; z-index: 50; }
+        .bb-share-item { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 14px; font-size: 13px; font-weight: 600; color: var(--text-1); text-decoration: none; background: none; border: none; cursor: pointer; text-align: left; transition: background 0.1s; white-space: nowrap; }
+        .bb-share-item:hover { background: var(--surface-2); }
         .bb-slide-number { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: #B8541F; margin-bottom: 16px; text-transform: uppercase; }
         .bb-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #B8541F; margin-bottom: 16px; }
         .bb-category-tag { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #B8541F; margin-bottom: 20px; }
