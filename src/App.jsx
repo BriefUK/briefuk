@@ -1141,7 +1141,7 @@ export default function App() {
         .bb-series-pill-active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.45); color: #fff; }
         .bb-card { background: #FAF8F3; border-radius: 16px; padding: 32px 28px 36px; margin-bottom: 20px; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
         .bb-card-visible { opacity: 1; transform: translateY(0); }
-        .bb-image-card { margin-bottom: 20px; border-radius: 16px; overflow: hidden; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
+        .bb-image-card { margin-bottom: 20px; border-radius: 16px; overflow: hidden; }
         .bb-image-card img { width: 100%; display: block; }
         .bb-slide-number { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: #B8541F; margin-bottom: 16px; text-transform: uppercase; }
         .bb-section-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: #B8541F; margin-bottom: 16px; }
