@@ -962,7 +962,7 @@ export default function App() {
           ? "radial-gradient(120% 55% at 50% 0%, rgba(233,180,76,0.16), transparent 55%), linear-gradient(180deg, #141a2a, #0e1320)"
           : "linear-gradient(180deg, #fbf3df 0%, #f6f1e8 100%)"
         : activeCategory === BLACKBOARD
-          ? "url('/blackboard-bg.png') center/cover no-repeat fixed"
+          ? `url('/${blackboardData?.series_slug === "what-is-ilr" ? "blackboard-ilr-bg.png" : "blackboard-bg.png"}') center/cover no-repeat fixed`
           : "var(--bg)",
     }}>
       <style>{`
