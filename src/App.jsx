@@ -603,43 +603,88 @@ function BlackboardCard({ card }) {
   );
 }
 
-function BlackboardPanel({ data, loading, onRetry }) {
+function BlackboardSeriesSidebar({ seriesList, activeSlug, onSelect }) {
+  if (seriesList.length <= 1) return null;
+  return (
+    <aside className="bb-series-sidebar">
+      <div className="bb-series-sidebar-label">All Series</div>
+      {seriesList.map(s => (
+        <button
+          key={s.series_slug}
+          className={`bb-series-btn${s.series_slug === activeSlug ? " bb-series-btn-active" : ""}`}
+          onClick={() => onSelect(s.series_slug)}
+        >
+          {s.series_title}
+        </button>
+      ))}
+    </aside>
+  );
+}
+
+function BlackboardMobileNav({ seriesList, activeSlug, onSelect }) {
+  if (seriesList.length <= 1) return null;
+  return (
+    <div className="bb-series-mobile-nav">
+      {seriesList.map(s => (
+        <button
+          key={s.series_slug}
+          className={`bb-series-pill${s.series_slug === activeSlug ? " bb-series-pill-active" : ""}`}
+          onClick={() => onSelect(s.series_slug)}
+        >
+          {s.series_title}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function BlackboardPanel({ data, loading, onRetry, seriesList, onSelectSeries }) {
+  const activeSlug = data?.series_slug;
+
   if (loading) {
     return (
-      <section className="bb-panel">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <div key={i} className="bb-card bb-card-visible">
-            <div className="skel-line" style={{ width: "20%", height: 10, marginBottom: 20 }} />
-            <div className="skel-line" style={{ width: "80%", height: 32, marginBottom: 12 }} />
-            <div className="skel-line" style={{ width: "100%", height: 14, marginBottom: 8 }} />
-            <div className="skel-line" style={{ width: "70%", height: 14 }} />
-          </div>
-        ))}
-      </section>
+      <div className="bb-layout">
+        <section className="bb-panel">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bb-card bb-card-visible">
+              <div className="skel-line" style={{ width: "20%", height: 10, marginBottom: 20 }} />
+              <div className="skel-line" style={{ width: "80%", height: 32, marginBottom: 12 }} />
+              <div className="skel-line" style={{ width: "100%", height: 14, marginBottom: 8 }} />
+              <div className="skel-line" style={{ width: "70%", height: 14 }} />
+            </div>
+          ))}
+        </section>
+      </div>
     );
   }
 
   if (!data || !data.cards?.length) {
     return (
-      <section className="bb-panel">
-        <div className="bb-empty">
-          <div className="empty-icon">📋</div>
-          <p className="empty-title">Nothing on the board yet</p>
-          <p className="empty-sub">Check back soon</p>
-          <button className="btn-primary" style={{ background: "#16324F", marginTop: 8 }} onClick={onRetry}>
-            Try again
-          </button>
-        </div>
-      </section>
+      <div className="bb-layout">
+        <section className="bb-panel">
+          <div className="bb-empty">
+            <div className="empty-icon">📋</div>
+            <p className="empty-title">Nothing on the board yet</p>
+            <p className="empty-sub">Check back soon</p>
+            <button className="btn-primary" style={{ background: "#16324F", marginTop: 8 }} onClick={onRetry}>
+              Try again
+            </button>
+          </div>
+        </section>
+      </div>
     );
   }
 
   return (
-    <section className="bb-panel">
-      <div className="bb-series-header">{data.series_title}</div>
-      {data.cards.map((card) => <BlackboardCard key={card.id} card={card} />)}
-      <div className="bb-credit">Blackboard by BriefUK</div>
-    </section>
+    <div className="bb-layout">
+      <section className="bb-panel">
+        <BlackboardMobileNav seriesList={seriesList} activeSlug={activeSlug} onSelect={onSelectSeries} />
+        <div className="bb-series-header">{data.series_title}</div>
+        {data.cards.map((card) => <BlackboardCard key={card.id} card={card} />)}
+        <div className="bb-credit">Blackboard by BriefUK</div>
+      </section>
+      <BlackboardSeriesSidebar seriesList={seriesList} activeSlug={activeSlug} onSelect={onSelectSeries} />
+    </div>
   );
 }
 
@@ -752,6 +797,7 @@ export default function App() {
   const [britBitLoading, setBritBitLoading] = useState(false);
   const [britBitFetched, setBritBitFetched] = useState(false);
   const [blackboardData, setBlackboardData] = useState(null);
+  const [blackboardAllSeries, setBlackboardAllSeries] = useState([]);
   const [blackboardLoading, setBlackboardLoading] = useState(false);
   const [blackboardFetched, setBlackboardFetched] = useState(false);
 
@@ -801,14 +847,24 @@ export default function App() {
       const res = await fetch("/api/blackboard");
       if (!res.ok) throw new Error("Failed");
       const data = await res.json();
+      setBlackboardAllSeries(data.allSeries || []);
       setBlackboardData(data);
     } catch {
       setBlackboardData(null);
+      setBlackboardAllSeries([]);
     } finally {
       setBlackboardFetched(true);
       setBlackboardLoading(false);
     }
   }, []);
+
+  function selectBlackboardSeries(slug) {
+    const found = blackboardAllSeries.find(s => s.series_slug === slug);
+    if (found) {
+      setBlackboardData(found);
+      window.scrollTo({ top: 0, behavior: "instant" });
+    }
+  }
 
   useEffect(() => {
     localStorage.setItem("briefuk-category", activeCategory);
@@ -1066,8 +1122,15 @@ export default function App() {
         /* ── Blackboard ───────────────────────────────────── */
         .blackboard-btn { color: #16324F; border-color: #16324F; }
         .blackboard-btn:not(.blackboard-active):hover { background: rgba(22,50,79,0.1); }
+        .bb-layout { flex: 1; min-width: 0; display: flex; align-items: flex-start; }
         .bb-panel { flex: 1; min-width: 0; padding: 24px 0 80px; }
         .bb-series-header { font-family: 'Playfair Display', Georgia, serif; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.12em; color: rgba(255,255,255,0.55); margin-bottom: 28px; }
+        .bb-series-sidebar { display: none; }
+        .bb-series-mobile-nav { display: flex; overflow-x: auto; gap: 8px; padding: 0 4px 20px; scrollbar-width: none; }
+        .bb-series-mobile-nav::-webkit-scrollbar { display: none; }
+        .bb-series-pill { flex-shrink: 0; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px; padding: 8px 14px; color: rgba(255,255,255,0.7); font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: background 0.2s, color 0.2s; }
+        .bb-series-pill:hover { background: rgba(255,255,255,0.18); color: #fff; }
+        .bb-series-pill-active { background: rgba(255,255,255,0.22); border-color: rgba(255,255,255,0.45); color: #fff; }
         .bb-card { background: #FAF8F3; border-radius: 16px; padding: 32px 28px 36px; margin-bottom: 20px; opacity: 0; transform: translateY(28px); transition: opacity 0.55s ease, transform 0.55s ease; }
         .bb-card-visible { opacity: 1; transform: translateY(0); }
         .bb-slide-number { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; color: #B8541F; margin-bottom: 16px; text-transform: uppercase; }
@@ -1155,6 +1218,12 @@ export default function App() {
           .theme-toggle { display: block; }
           .nav-sidebar { top: 104px; max-height: calc(100vh - 104px); }
           .sidebar { top: 104px; max-height: calc(100vh - 104px); }
+          .bb-series-sidebar { display: flex; flex-direction: column; gap: 6px; width: 220px; flex-shrink: 0; padding: 24px 0 24px 20px; position: sticky; top: 104px; max-height: calc(100vh - 104px); overflow-y: auto; }
+          .bb-series-sidebar-label { font-size: 10px; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase; color: rgba(255,255,255,0.4); margin-bottom: 8px; padding-left: 2px; }
+          .bb-series-btn { background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.12); border-radius: 10px; padding: 12px 14px; text-align: left; color: rgba(255,255,255,0.65); font-size: 13px; font-family: 'Playfair Display', Georgia, serif; font-weight: 600; cursor: pointer; line-height: 1.4; transition: background 0.2s, color 0.2s, border-color 0.2s; width: 100%; }
+          .bb-series-btn:hover { background: rgba(255,255,255,0.13); color: #fff; }
+          .bb-series-btn-active { background: rgba(255,255,255,0.16); border-color: rgba(255,255,255,0.35); color: #fff; }
+          .bb-series-mobile-nav { display: none; }
         }
 
         /* ── Mobile ───────────────────────────────────────── */
@@ -1203,6 +1272,8 @@ export default function App() {
             data={blackboardData}
             loading={blackboardLoading}
             onRetry={fetchBlackboard}
+            seriesList={blackboardAllSeries}
+            onSelectSeries={selectBlackboardSeries}
           />
         ) : (
           <div className="main-area">
