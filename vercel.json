@@ -12,5 +12,8 @@
     { "path": "/api/cron-fetch",    "schedule": "*/30 * * * *" },
     { "path": "/api/cron-resume",   "schedule": "15,45 * * * *" },
     { "path": "/api/cron-brit-bit", "schedule": "0 8 * * 4" }
+  ],
+  "rewrites": [
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
