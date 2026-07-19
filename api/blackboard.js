@@ -46,7 +46,7 @@ export default async function handler(req, res) {
     cards,
   }));
 
-  res.setHeader("Cache-Control", "s-maxage=3600, stale-while-revalidate=86400");
+  res.setHeader("Cache-Control", "s-maxage=60, stale-while-revalidate=120");
   res.status(200).json({
     series_slug: active.series_slug,
     series_title: active.series_title,
